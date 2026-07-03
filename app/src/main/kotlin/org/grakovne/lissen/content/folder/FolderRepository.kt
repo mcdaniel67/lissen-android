@@ -16,6 +16,9 @@ interface FolderRepository {
 
   suspend fun folderBooks(folderId: String): List<Book>
 
+  /** Ids of every book that belongs to any folder, so they can be hidden from the flat library list. */
+  suspend fun foldedBookIds(): Set<String>
+
   suspend fun createFolder(
     name: String,
     books: List<Book>,

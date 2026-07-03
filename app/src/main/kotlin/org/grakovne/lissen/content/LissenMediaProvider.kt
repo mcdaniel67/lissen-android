@@ -10,6 +10,7 @@ import org.grakovne.lissen.common.LibraryGrouping
 import org.grakovne.lissen.content.cache.persistent.LocalCacheRepository
 import org.grakovne.lissen.content.cache.temporary.CachedBookmarkProvider
 import org.grakovne.lissen.content.cache.temporary.CachedCoverProvider
+import org.grakovne.lissen.content.folder.FolderRepository
 import org.grakovne.lissen.domain.Book
 import org.grakovne.lissen.domain.Bookmark
 import org.grakovne.lissen.domain.DetailedItem
@@ -37,6 +38,7 @@ class LissenMediaProvider
     private val localCacheRepository: LocalCacheRepository,
     private val cachedCoverProvider: CachedCoverProvider,
     private val cachedBookmarkProvider: CachedBookmarkProvider,
+    private val folderRepository: FolderRepository,
   ) {
     suspend fun dropBookmark(bookmark: Bookmark) {
       Timber.d("Dropping bookmark for ${bookmark.libraryItemId} at position=${bookmark.totalPosition.toInt()}s")
@@ -214,15 +216,35 @@ class LissenMediaProvider
           }
         }
 
+      // Books that live in a user folder are moved out of the flat library list, so they aren't
+      // shown both inside and outside their folder.
+      val foldedIds = folderRepository.foldedBookIds()
+      val filtered =
+        when {
+          foldedIds.isEmpty() -> {
+            result
+          }
+
+          else -> {
+            result.map { paged ->
+              PagedItems(
+                items = paged.items.filterNot { it is LibraryEntry.BookEntry && it.book.id in foldedIds },
+                currentPage = paged.currentPage,
+                totalItems = paged.totalItems,
+              )
+            }
+          }
+        }
+
       // "Downloaded first" only applies to the flat (ungrouped) list, and operates per loaded page:
       // cached books rise to the top of each page. A fully global ordering would require the whole
       // library in memory, which the paged feed intentionally avoids.
       if (grouping != LibraryGrouping.NONE || preferences.isForceCache() || preferences.getDownloadedFirst().not()) {
-        return result
+        return filtered
       }
 
       val cachedIds = localCacheRepository.fetchCachedBookIds()
-      return result.map { paged ->
+      return filtered.map { paged ->
         val (downloaded, rest) =
           paged.items.partition { it is LibraryEntry.BookEntry && it.book.id in cachedIds }
         PagedItems(

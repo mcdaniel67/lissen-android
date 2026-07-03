@@ -167,12 +167,16 @@ class LibraryViewModel
       viewModelScope.launch {
         folderRepository.createFolder(name, books)
         clearSelection()
+        refreshLibrary()
       }
     }
 
     fun deleteFolder(folderId: String) {
       Timber.d("User action: deleteFolder $folderId")
-      viewModelScope.launch { folderRepository.deleteFolder(folderId) }
+      viewModelScope.launch {
+        folderRepository.deleteFolder(folderId)
+        refreshLibrary()
+      }
     }
 
     fun requestSearch() {

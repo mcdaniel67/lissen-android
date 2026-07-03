@@ -17,6 +17,9 @@ interface FolderDao {
   @Query("SELECT * FROM folder_items WHERE folderId = :folderId ORDER BY position ASC")
   suspend fun folderItems(folderId: String): List<FolderItemEntity>
 
+  @Query("SELECT DISTINCT bookId FROM folder_items")
+  suspend fun foldedBookIds(): List<String>
+
   @Insert(onConflict = OnConflictStrategy.REPLACE)
   suspend fun upsertFolder(folder: FolderEntity)
 

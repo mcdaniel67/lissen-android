@@ -37,6 +37,8 @@ class LocalFolderRepository
         .folderItems(folderId)
         .map { it.toBook() }
 
+    override suspend fun foldedBookIds(): Set<String> = folderDao.foldedBookIds().toSet()
+
     override suspend fun createFolder(
       name: String,
       books: List<Book>,

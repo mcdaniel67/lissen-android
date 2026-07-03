@@ -23,15 +23,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.automirrored.outlined.Sort
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowDownward
 import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.CollectionsBookmark
+import androidx.compose.material.icons.outlined.DownloadForOffline
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SortByAlpha
 import androidx.compose.material.icons.outlined.Update
@@ -40,6 +44,7 @@ import androidx.compose.material.icons.outlined.Workspaces
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.ModalBottomSheet
@@ -93,6 +98,7 @@ fun QuickSettingsComposable(
   val forceCache by cachingModelView.forceCache.collectAsState(false)
   val hideCompleted by settingsModelView.hideCompleted.collectAsState(false)
   val grouping by settingsModelView.libraryGrouping.collectAsState(LibraryGrouping.NONE)
+  val downloadedFirst by settingsModelView.downloadedFirst.collectAsState(false)
   val ordering by settingsModelView.preferredLibraryOrdering.collectAsState()
   val context = LocalContext.current
   val view = LocalView.current
@@ -126,6 +132,18 @@ fun QuickSettingsComposable(
         checked = isLibrary && hideCompleted,
         enabled = isLibrary,
         onClick = { onHideCompletedToggled() },
+      )
+
+      val downloadedFirstAvailable = isLibrary && grouping == LibraryGrouping.NONE
+      ToggleRow(
+        title = stringResource(R.string.library_downloaded_first),
+        icon = Icons.Outlined.DownloadForOffline,
+        checked = downloadedFirstAvailable && downloadedFirst,
+        enabled = downloadedFirstAvailable,
+        onClick = {
+          settingsModelView.toggleDownloadedFirst()
+          onSortingChanged()
+        },
       )
 
       Spacer(modifier = Modifier.height(8.dp))
@@ -162,7 +180,23 @@ fun QuickSettingsComposable(
         }
       }
 
-      val sortRequired = isLibrary && grouping == LibraryGrouping.AUTHOR
+      AnimatedVisibility(visible = isLibrary && grouping == LibraryGrouping.AUTHOR_SMART) {
+        val threshold by settingsModelView.authorGroupingThreshold.collectAsState(initial = 4)
+        StepperRow(
+          title = stringResource(R.string.library_grouping_author_smart_threshold),
+          value = threshold,
+          onDecrement = {
+            settingsModelView.preferAuthorGroupingThreshold(threshold - 1)
+            onSortingChanged()
+          },
+          onIncrement = {
+            settingsModelView.preferAuthorGroupingThreshold(threshold + 1)
+            onSortingChanged()
+          },
+        )
+      }
+
+      val sortRequired = isLibrary && (grouping == LibraryGrouping.AUTHOR || grouping == LibraryGrouping.AUTHOR_SMART)
       val displayedSortOption = if (sortRequired) LibraryOrderingOption.AUTHOR else ordering.option
 
       PickerHeaderRow(
@@ -356,6 +390,48 @@ private fun OptionRow(
 }
 
 @Composable
+private fun StepperRow(
+  title: String,
+  value: Int,
+  onDecrement: () -> Unit,
+  onIncrement: () -> Unit,
+) {
+  Row(
+    modifier =
+      Modifier
+        .fillMaxWidth()
+        .padding(start = 24.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Text(
+      text = title,
+      style = typography.bodyLarge,
+      color = colorScheme.onSurface,
+      modifier = Modifier.weight(1f),
+    )
+    IconButton(onClick = onDecrement) {
+      Icon(
+        imageVector = Icons.Outlined.Remove,
+        contentDescription = null,
+        tint = colorScheme.onSurfaceVariant,
+      )
+    }
+    Text(
+      text = value.toString(),
+      style = typography.bodyLarge,
+      color = colorScheme.onSurface,
+    )
+    IconButton(onClick = onIncrement) {
+      Icon(
+        imageVector = Icons.Outlined.Add,
+        contentDescription = null,
+        tint = colorScheme.onSurfaceVariant,
+      )
+    }
+  }
+}
+
+@Composable
 fun ApplicationSettingsItemComposable(onClicked: () -> Unit) {
   Row(
     modifier =
@@ -411,6 +487,7 @@ private fun LibraryGrouping.icon(): ImageVector =
     LibraryGrouping.NONE -> Icons.AutoMirrored.Outlined.List
     LibraryGrouping.SERIES -> Icons.Outlined.CollectionsBookmark
     LibraryGrouping.AUTHOR -> Icons.Outlined.Person
+    LibraryGrouping.AUTHOR_SMART -> Icons.Outlined.Groups
   }
 
 private fun LibraryGrouping.toLocalizedName(context: Context): String =
@@ -418,4 +495,5 @@ private fun LibraryGrouping.toLocalizedName(context: Context): String =
     LibraryGrouping.NONE -> context.getString(R.string.library_grouping_disabled)
     LibraryGrouping.SERIES -> context.getString(R.string.library_grouping_series)
     LibraryGrouping.AUTHOR -> context.getString(R.string.library_grouping_author)
+    LibraryGrouping.AUTHOR_SMART -> context.getString(R.string.library_grouping_author_smart)
   }

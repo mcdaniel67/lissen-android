@@ -45,4 +45,33 @@ class SeriesOrderingTest {
 
     assertEquals(listOf("one", "two", "x", "y"), ordered.map { it.id })
   }
+
+  @Test
+  fun `author grouping clusters by series then orders by position within each series`() {
+    val ordered =
+      listOf(
+        book("mistborn2", series = "Mistborn #2"),
+        book("stormlight1", series = "The Stormlight Archive #1"),
+        book("mistborn1", series = "Mistborn #1"),
+        book("standalone", series = null),
+        book("stormlight2", series = "The Stormlight Archive #2"),
+      ).sortedBySeriesThenPosition()
+
+    assertEquals(
+      listOf("mistborn1", "mistborn2", "stormlight1", "stormlight2", "standalone"),
+      ordered.map { it.id },
+    )
+  }
+
+  @Test
+  fun `standalone titles fall to the end sorted by title`() {
+    val ordered =
+      listOf(
+        book("zeta", series = null),
+        book("alpha", series = null),
+        book("seriesbook", series = "Dune #1"),
+      ).sortedBySeriesThenPosition()
+
+    assertEquals(listOf("seriesbook", "alpha", "zeta"), ordered.map { it.id })
+  }
 }

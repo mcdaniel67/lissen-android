@@ -190,25 +190,46 @@ class LissenMediaProvider
     ): OperationResult<PagedItems<LibraryEntry>> {
       Timber.d("Fetching library: libraryId=$libraryId, page=$pageNumber, pageSize=$pageSize")
 
-      return when (preferences.isForceCache()) {
-        true -> {
-          localCacheRepository.fetchLibrary(
-            libraryId = libraryId,
-            pageSize = pageSize,
-            pageNumber = pageNumber,
-            libraryGrouping = preferences.getLibraryGrouping(),
-          )
-        }
+      val grouping = preferences.getLibraryGrouping()
 
-        false -> {
-          providePreferredChannel()
-            .fetchLibrary(
+      val result =
+        when (preferences.isForceCache()) {
+          true -> {
+            localCacheRepository.fetchLibrary(
               libraryId = libraryId,
               pageSize = pageSize,
               pageNumber = pageNumber,
-              libraryGrouping = preferences.getLibraryGrouping(),
+              libraryGrouping = grouping,
             )
+          }
+
+          false -> {
+            providePreferredChannel()
+              .fetchLibrary(
+                libraryId = libraryId,
+                pageSize = pageSize,
+                pageNumber = pageNumber,
+                libraryGrouping = grouping,
+              )
+          }
         }
+
+      // "Downloaded first" only applies to the flat (ungrouped) list, and operates per loaded page:
+      // cached books rise to the top of each page. A fully global ordering would require the whole
+      // library in memory, which the paged feed intentionally avoids.
+      if (grouping != LibraryGrouping.NONE || preferences.isForceCache() || preferences.getDownloadedFirst().not()) {
+        return result
+      }
+
+      val cachedIds = localCacheRepository.fetchCachedBookIds()
+      return result.map { paged ->
+        val (downloaded, rest) =
+          paged.items.partition { it is LibraryEntry.BookEntry && it.book.id in cachedIds }
+        PagedItems(
+          items = downloaded + rest,
+          currentPage = paged.currentPage,
+          totalItems = paged.totalItems,
+        )
       }
     }
 

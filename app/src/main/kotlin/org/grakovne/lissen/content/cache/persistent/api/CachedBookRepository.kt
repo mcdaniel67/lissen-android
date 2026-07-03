@@ -93,6 +93,8 @@ class CachedBookRepository
 
     suspend fun countCachedItems(): Int = bookDao.fetchCachedItemsCount()
 
+    suspend fun fetchCachedBookIds(): Set<String> = bookDao.fetchAllCachedIds().toSet()
+
     suspend fun fetchLatestUpdate(libraryId: String) = bookDao.fetchLatestUpdate(libraryId)
 
     suspend fun fetchBooks(

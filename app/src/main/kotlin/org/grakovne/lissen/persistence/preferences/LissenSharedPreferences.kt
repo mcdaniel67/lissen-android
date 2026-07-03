@@ -313,6 +313,17 @@ class LissenSharedPreferences
 
     fun getDownloadChaptersCount(): Int = sharedPreferences.getInt(KEY_DOWNLOAD_CHAPTERS_COUNT, DEFAULT_DOWNLOAD_CHAPTERS_COUNT)
 
+    fun saveAuthorGroupingThreshold(count: Int) =
+      sharedPreferences.edit {
+        putInt(KEY_AUTHOR_GROUPING_THRESHOLD, count.coerceIn(MIN_AUTHOR_GROUPING_THRESHOLD, MAX_AUTHOR_GROUPING_THRESHOLD))
+      }
+
+    fun getAuthorGroupingThreshold(): Int = sharedPreferences.getInt(KEY_AUTHOR_GROUPING_THRESHOLD, DEFAULT_AUTHOR_GROUPING_THRESHOLD)
+
+    fun getDownloadedFirst(): Boolean = sharedPreferences.getBoolean(KEY_DOWNLOADED_FIRST, false)
+
+    fun saveDownloadedFirst(enabled: Boolean) = sharedPreferences.edit { putBoolean(KEY_DOWNLOADED_FIRST, enabled) }
+
     private fun <T> asFlow(
       key: String,
       getter: () -> T,
@@ -343,6 +354,8 @@ class LissenSharedPreferences
     val preferredLibraryTypeFlow = asFlow(KEY_PREFERRED_LIBRARY_TYPE) { getPreferredLibrary()?.type ?: LibraryType.UNKNOWN }
     val hideCompletedFlow = asFlow(KEY_HIDE_COMPLETED, ::getHideCompleted)
     val libraryGroupingFlow = asFlow(KEY_LIBRARY_GROUPING, ::getLibraryGrouping)
+    val authorGroupingThresholdFlow = asFlow(KEY_AUTHOR_GROUPING_THRESHOLD, ::getAuthorGroupingThreshold)
+    val downloadedFirstFlow = asFlow(KEY_DOWNLOADED_FIRST, ::getDownloadedFirst)
     val clientCertAliasFlow = asFlow(KEY_CLIENT_CERT_ALIAS, ::getClientCertAlias)
 
     private fun saveActiveLibraryId(host: String) = sharedPreferences.edit { putString(KEY_PREFERRED_LIBRARY_ID, host) }
@@ -721,6 +734,11 @@ class LissenSharedPreferences
       private const val KEY_PREFERRED_PLAYBACK_SPEED = "preferred_playback_speed"
       private const val KEY_DOWNLOAD_CHAPTERS_COUNT = "download_chapters_count"
       private const val DEFAULT_DOWNLOAD_CHAPTERS_COUNT = 5
+      private const val KEY_AUTHOR_GROUPING_THRESHOLD = "author_grouping_threshold"
+      private const val KEY_DOWNLOADED_FIRST = "downloaded_first"
+      private const val DEFAULT_AUTHOR_GROUPING_THRESHOLD = 4
+      private const val MIN_AUTHOR_GROUPING_THRESHOLD = 1
+      private const val MAX_AUTHOR_GROUPING_THRESHOLD = 20
       private const val KEY_PREFERRED_SEEK_TIME = "preferred_seek_time"
 
       private const val KEY_PREFERRED_COLOR_SCHEME = "preferred_color_scheme"

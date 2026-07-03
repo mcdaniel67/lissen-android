@@ -338,6 +338,23 @@ val MIGRATION_18_19 =
     }
   }
 
+val MIGRATION_20_21 =
+  object : Migration(20, 21) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+      db.execSQL(
+        "CREATE TABLE IF NOT EXISTS `folders` (" +
+          "`id` TEXT NOT NULL, `name` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, " +
+          "PRIMARY KEY(`id`))",
+      )
+      db.execSQL(
+        "CREATE TABLE IF NOT EXISTS `folder_items` (" +
+          "`folderId` TEXT NOT NULL, `bookId` TEXT NOT NULL, `title` TEXT NOT NULL, " +
+          "`subtitle` TEXT, `author` TEXT, `series` TEXT, `position` INTEGER NOT NULL, " +
+          "PRIMARY KEY(`folderId`, `bookId`))",
+      )
+    }
+  }
+
 val MIGRATION_19_20 =
   object : Migration(19, 20) {
     override fun migrate(db: SupportSQLiteDatabase) {

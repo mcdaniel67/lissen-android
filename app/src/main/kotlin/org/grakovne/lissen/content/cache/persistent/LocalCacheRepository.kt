@@ -77,6 +77,8 @@ class LocalCacheRepository
         .searchBooks(libraryId = libraryId, query = query)
         .let { OperationResult.Success(it) }
 
+    suspend fun fetchCachedBookIds(): Set<String> = cachedBookRepository.fetchCachedBookIds()
+
     suspend fun fetchDetailedItems(): OperationResult<PagedItems<DetailedItem>> {
       val items = cachedBookRepository.fetchCachedItems()
 
@@ -145,7 +147,8 @@ class LocalCacheRepository
             .let { OperationResult.Success(it) }
         }
 
-        LibraryGrouping.AUTHOR -> {
+        // Offline falls back to plain author dropdowns; inline flattening is an online-only refinement.
+        LibraryGrouping.AUTHOR, LibraryGrouping.AUTHOR_SMART -> {
           val entries = cachedBookRepository.fetchAuthorsGrouped(libraryId)
           val fromIndex = (pageNumber * pageSize).coerceIn(0, entries.size)
           val toIndex = (fromIndex + pageSize).coerceIn(0, entries.size)

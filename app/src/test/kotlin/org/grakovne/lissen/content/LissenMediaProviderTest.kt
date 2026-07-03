@@ -10,13 +10,16 @@ import org.grakovne.lissen.channel.audiobookshelf.AudiobookshelfChannelProvider
 import org.grakovne.lissen.channel.common.MediaChannel
 import org.grakovne.lissen.channel.common.OperationError
 import org.grakovne.lissen.channel.common.OperationResult
+import org.grakovne.lissen.common.LibraryGrouping
 import org.grakovne.lissen.content.cache.persistent.LocalCacheRepository
 import org.grakovne.lissen.content.cache.temporary.CachedBookmarkProvider
 import org.grakovne.lissen.content.cache.temporary.CachedCoverProvider
+import org.grakovne.lissen.content.folder.FolderRepository
 import org.grakovne.lissen.domain.Book
 import org.grakovne.lissen.domain.Bookmark
 import org.grakovne.lissen.domain.DetailedItem
 import org.grakovne.lissen.domain.Library
+import org.grakovne.lissen.domain.LibraryEntry
 import org.grakovne.lissen.domain.LibraryType
 import org.grakovne.lissen.domain.PagedItems
 import org.grakovne.lissen.domain.PlaybackProgress
@@ -36,6 +39,7 @@ class LissenMediaProviderTest {
   private val localCacheRepository = mockk<LocalCacheRepository>(relaxed = true)
   private val cachedCoverProvider = mockk<CachedCoverProvider>(relaxed = true)
   private val cachedBookmarkProvider = mockk<CachedBookmarkProvider>(relaxed = true)
+  private val folderRepository = mockk<FolderRepository>(relaxed = true)
   private val mediaChannel = mockk<MediaChannel>(relaxed = true)
 
   private lateinit var provider: LissenMediaProvider
@@ -50,6 +54,7 @@ class LissenMediaProviderTest {
         localCacheRepository,
         cachedCoverProvider,
         cachedBookmarkProvider,
+        folderRepository,
       )
   }
 
@@ -190,6 +195,66 @@ class LissenMediaProviderTest {
         provider.fetchBooks("l1", 10, 0)
 
         coVerify { mediaChannel.fetchBooks("l1", 10, 0) }
+      }
+  }
+
+  @Nested
+  inner class FetchLibrary {
+    @Test
+    fun `downloaded first returns cached books before remote books on first page`() =
+      runBlocking {
+        val cached = listOf(book("cached-1"), book("cached-2"))
+        val remote =
+          listOf(
+            LibraryEntry.BookEntry(book("remote-1")),
+            LibraryEntry.BookEntry(book("cached-1")),
+            LibraryEntry.BookEntry(book("remote-2")),
+          )
+
+        every { preferences.isForceCache() } returns false
+        every { preferences.getLibraryGrouping() } returns LibraryGrouping.NONE
+        every { preferences.getDownloadedFirst() } returns true
+        coEvery { localCacheRepository.fetchCachedBooks("l1") } returns cached
+        coEvery {
+          mediaChannel.fetchLibrary("l1", 3, 0, LibraryGrouping.NONE)
+        } returns OperationResult.Success(PagedItems(remote, currentPage = 0, totalItems = 5))
+
+        val result = provider.fetchLibrary("l1", pageSize = 3, pageNumber = 0)
+
+        assertEquals(
+          listOf("cached-1", "cached-2", "remote-1"),
+          (result as OperationResult.Success).data.items.bookIds(),
+        )
+      }
+
+    @Test
+    fun `downloaded first uses global ordering across later pages`() =
+      runBlocking {
+        val cached = listOf(book("cached-1"), book("cached-2"))
+        val remote =
+          listOf(
+            LibraryEntry.BookEntry(book("remote-1")),
+            LibraryEntry.BookEntry(book("cached-1")),
+            LibraryEntry.BookEntry(book("remote-2")),
+            LibraryEntry.BookEntry(book("cached-2")),
+            LibraryEntry.BookEntry(book("remote-3")),
+            LibraryEntry.BookEntry(book("remote-4")),
+          )
+
+        every { preferences.isForceCache() } returns false
+        every { preferences.getLibraryGrouping() } returns LibraryGrouping.NONE
+        every { preferences.getDownloadedFirst() } returns true
+        coEvery { localCacheRepository.fetchCachedBooks("l1") } returns cached
+        coEvery {
+          mediaChannel.fetchLibrary("l1", 6, 0, LibraryGrouping.NONE)
+        } returns OperationResult.Success(PagedItems(remote, currentPage = 0, totalItems = 6))
+
+        val result = provider.fetchLibrary("l1", pageSize = 3, pageNumber = 1)
+
+        assertEquals(
+          listOf("remote-2", "remote-3", "remote-4"),
+          (result as OperationResult.Success).data.items.bookIds(),
+        )
       }
   }
 
@@ -494,6 +559,23 @@ class LissenMediaProviderTest {
       listenedPercentage = null,
       listenedLastUpdate = null,
     )
+
+  private fun book(id: String) =
+    Book(
+      id = id,
+      title = "Book $id",
+      subtitle = null,
+      series = null,
+      author = "Author",
+    )
+
+  private fun List<LibraryEntry>.bookIds(): List<String> =
+    mapNotNull {
+      when (it) {
+        is LibraryEntry.BookEntry -> it.book.id
+        else -> null
+      }
+    }
 
   private fun bookmark(
     libraryItemId: String,

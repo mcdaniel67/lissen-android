@@ -48,6 +48,7 @@ fun FolderComposable(
   navController: AppNavigationService,
   onToggle: () -> Unit,
   onLongClick: () -> Unit,
+  downloadedIds: Set<String> = emptySet(),
 ) {
   val context = LocalContext.current
 
@@ -141,6 +142,7 @@ fun FolderComposable(
                 book = book,
                 imageLoader = imageLoader,
                 navController = navController,
+                downloaded = book.id in downloadedIds,
               )
             }
           }

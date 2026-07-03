@@ -79,6 +79,8 @@ class LocalCacheRepository
 
     suspend fun fetchCachedBookIds(): Set<String> = cachedBookRepository.fetchCachedBookIds()
 
+    fun observeCachedBookIds() = cachedBookRepository.observeCachedBookIds()
+
     suspend fun fetchDetailedItems(): OperationResult<PagedItems<DetailedItem>> {
       val items = cachedBookRepository.fetchCachedItems()
 

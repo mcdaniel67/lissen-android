@@ -22,8 +22,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,7 +34,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil3.ImageLoader
 import coil3.request.ImageRequest
 import org.grakovne.lissen.R
@@ -45,7 +42,6 @@ import org.grakovne.lissen.domain.Book
 import org.grakovne.lissen.ui.components.AsyncShimmeringImage
 import org.grakovne.lissen.ui.components.BookCoverKey
 import org.grakovne.lissen.ui.navigation.AppNavigationService
-import org.grakovne.lissen.viewmodel.CachingModelView
 
 val LibraryItemCoverSize = 64.dp
 
@@ -57,7 +53,7 @@ fun BookComposable(
   navController: AppNavigationService,
   grouping: LibraryGrouping = LibraryGrouping.NONE,
   leading: (@Composable () -> Unit)? = null,
-  cachingModelView: CachingModelView = hiltViewModel(),
+  downloaded: Boolean = false,
   selectionMode: Boolean = false,
   selected: Boolean = false,
   onSelectToggle: () -> Unit = {},
@@ -72,9 +68,6 @@ fun BookComposable(
         .data(BookCoverKey(book.id))
         .build()
     }
-
-  val downloadedFlow = remember(book.id) { cachingModelView.provideCacheState(book.id) }
-  val downloaded by downloadedFlow.collectAsState(initial = false)
 
   Row(
     modifier =

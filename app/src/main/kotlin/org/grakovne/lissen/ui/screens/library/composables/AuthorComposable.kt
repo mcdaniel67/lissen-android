@@ -57,6 +57,7 @@ fun AuthorComposable(
   navController: AppNavigationService,
   onToggle: () -> Unit,
   onPrefetch: () -> Unit,
+  downloadedIds: Set<String> = emptySet(),
 ) {
   val context = LocalContext.current
 
@@ -158,6 +159,7 @@ fun AuthorComposable(
                 imageLoader = imageLoader,
                 navController = navController,
                 grouping = LibraryGrouping.AUTHOR,
+                downloaded = book.id in downloadedIds,
                 leading = { AuthorBookLeading() },
               )
             }

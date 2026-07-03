@@ -146,6 +146,7 @@ fun LibraryScreen(
   val libraryCount by libraryViewModel.totalCount.collectAsState()
   val selectionActive by libraryViewModel.selectionActive.collectAsState()
   val selectedBookIds by libraryViewModel.selectedBookIds.collectAsState()
+  val downloadedIds by cachingModelView.cachedBookIds.collectAsState()
   val folders by libraryViewModel.folders.collectAsState()
   var showCreateFolder by remember { mutableStateOf(false) }
   var folderPendingDelete by remember { mutableStateOf<LibraryEntry.FolderEntry?>(null) }
@@ -537,6 +538,7 @@ fun LibraryScreen(
                 navController = navController,
                 onToggle = { libraryViewModel.toggleGroup(folder) },
                 onLongClick = { folderPendingDelete = folder },
+                downloadedIds = downloadedIds,
               )
             }
           }
@@ -566,6 +568,7 @@ fun LibraryScreen(
                       imageLoader = imageLoader,
                       navController = navController,
                       grouping = libraryGrouping,
+                      downloaded = entry.book.id in downloadedIds,
                       selectionMode = selectionActive,
                       selected = entry.book.id in selectedBookIds,
                       onSelectToggle = { libraryViewModel.toggleSelection(entry.book) },
@@ -583,6 +586,7 @@ fun LibraryScreen(
                       navController = navController,
                       onToggle = { libraryViewModel.toggleGroup(entry) },
                       onPrefetch = { libraryViewModel.prefetchGroup(entry) },
+                      downloadedIds = downloadedIds,
                     )
                   }
 
@@ -596,6 +600,7 @@ fun LibraryScreen(
                       navController = navController,
                       onToggle = { libraryViewModel.toggleGroup(entry) },
                       onPrefetch = { libraryViewModel.prefetchGroup(entry) },
+                      downloadedIds = downloadedIds,
                     )
                   }
 

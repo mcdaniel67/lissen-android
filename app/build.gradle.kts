@@ -123,6 +123,17 @@ android {
       enableUnitTestCoverage = true
       enableAndroidTestCoverage = true
     }
+    // Personal, non-debuggable build for on-device use: performs like a real release (ART AOT,
+    // no debugger throttling) while coexisting with the real app via a distinct applicationId.
+    // Signed with the local Android debug keystore so it installs and updates without key setup.
+    create("personal") {
+      initWith(getByName("release"))
+      applicationIdSuffix = ".personal"
+      versionNameSuffix = " (PERSONAL)"
+      isDebuggable = false
+      signingConfig = signingConfigs.getByName("debug")
+      matchingFallbacks.add("release")
+    }
   }
   
   compileOptions {

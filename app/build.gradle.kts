@@ -81,11 +81,11 @@ android {
   }
   
   defaultConfig {
-    applicationId = "org.grakovne.lissen"
+    applicationId = "io.github.mcdaniel67.lissen"
     minSdk = 28
     targetSdk = 37
     versionCode = 11104
-    versionName = "1.11.4-release"
+    versionName = "1.11.4-fork.1"
     
     testInstrumentationRunner = "org.grakovne.lissen.HiltTestRunner"
     

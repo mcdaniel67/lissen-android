@@ -52,9 +52,10 @@ it, not just bigger.
 
 ---
 
-## 2. Current state (read before WP-0)
+## 2. Current state (historical — WP-0 has landed; everything below now lives on `main`)
 
-Branch map at the time of writing:
+Branch map before consolidation (branches since deleted; upstream's
+`feature/mark-as-completed` still exists and matters for WP-6):
 
 | Branch | Base | Contents |
 |---|---|---|
@@ -105,7 +106,11 @@ WP-0 consolidate
 
 ---
 
-### WP-0 — Consolidate all branches onto one `main`
+### WP-0 — Consolidate all branches onto one `main` ✅ DONE 2026-07-07
+
+> Completed: main = upstream `5c9da074` + merge `6b2b1b9d` + README. 788 unit
+> tests green, debug APK builds, rerere enabled, `upstream-reviewed` tag pushed,
+> local + remote feature branches deleted. Residual: on-device smoke pass.
 
 **Goal:** one `main` containing upstream/main tip + every fork feature. All other
 local branches deleted afterward.
@@ -152,15 +157,19 @@ local branches deleted afterward.
 
 **Steps:**
 1. In `app/build.gradle.kts`:
-   - Change `applicationId` to `com.ni7o.lissen` (**confirm final id with Kyle
-     before committing** — it is user-visible forever). Keep `namespace`
-     `org.grakovne.lissen` so no source/resource churn.
-   - Delete the `personal` build type — with a distinct applicationId, plain
-     `release` (signed with the local keystore) *is* the personal build.
-   - Add a version scheme that marks fork releases, e.g. keep upstream's
-     `versionName` and append `-fork.N`.
-2. Change the launcher label (`app_name` string / manifest `android:label`).
-   Keep it recognizably Lissen, e.g. "Lissen Fork" — confirm with Kyle.
+   - Change `applicationId` to `io.github.mcdaniel67.lissen` (decided 2026-07-07).
+     Keep `namespace` `org.grakovne.lissen` so no source/resource churn.
+   - **Keep the `personal` build type for now** (decided 2026-07-07). No release
+     keystore is configured yet, and `personal` signs with the debug keystore so
+     it stays the working on-device install. Deleting it (so signed `release` *is*
+     the personal build) is deferred to a dedicated release-setup task that first
+     generates a stable fork keystore — required anyway for GitHub-releases +
+     Obtainium updates, whose signature check the debug key would break.
+   - Version scheme: `versionName = "1.11.4-fork.1"` (drop upstream's `-release`
+     suffix, mark fork builds with `-fork.N`). `versionCode` unchanged (11104) —
+     the new `applicationId` is a distinct app identity.
+2. Change the launcher label (`app_name` string / manifest `android:label`) to
+   **"Lissen Fork"** (decided 2026-07-07).
 3. Grep for hardcoded `org.grakovne.lissen` in `AndroidManifest.xml`, widget XML,
    and OAuth redirect/intent-filter schemes. The OAuth flow (`channel/common/Pkce.kt`,
    manifest intent filters) may embed a scheme — verify login (both password and

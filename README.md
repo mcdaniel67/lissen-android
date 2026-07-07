@@ -1,89 +1,75 @@
-# Lissen - Clean Audiobookshelf Player
-[![Build Lissen App](https://github.com/GrakovNe/lissen-android/actions/workflows/app_build.yml/badge.svg)](https://github.com/GrakovNe/lissen-android/actions/workflows/app_build.yml)
+# Lissen (fork) — Audiobookshelf Player
 
-<p align="center"> 
-  <a href="https://play.google.com/store/apps/details?id=org.grakovne.lissen"><img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Get it on Google Play" height="60"></a>&nbsp;&nbsp;&nbsp;<!--
-  --><a href="https://f-droid.org/packages/org.grakovne.lissen"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a3/Get_it_on_F-Droid_%28material_design%29.svg" alt="Get it on F-Droid" height="60"></a>
-</p>
+An opinionated fork of [GrakovNe's Lissen](https://github.com/GrakovNe/lissen-android),
+a clean Android client for [Audiobookshelf](https://github.com/advplyr/audiobookshelf).
 
-### Features
+### Why a fork?
 
-  * Beautiful Interface: Intuitive design that makes browsing and listening to your audiobooks easy and enjoyable.
-  * Cloud Sync: Automatically syncs your audiobook progress across devices, keeping everything up to date no matter where you are.
-  * Streaming Support: Stream your audiobooks directly from the cloud without needing to download them first.
-  * Offline Listening: Download audiobooks to listen offline, ideal for those who want to access their collection without an internet connection.
+Upstream Lissen is deliberately minimalist — a focused, uncluttered player, and
+that focus is exactly what makes it good. This fork simply has different goals:
+it's tuned for managing a large personal Audiobookshelf library, which means more
+library-management surface (folders, bulk actions, download visibility) than fits
+upstream's design. These changes were proposed upstream and respectfully declined,
+so they live here instead.
 
-### Screenshots
+If you want the polished, minimalist experience — use the original from
+[Google Play](https://play.google.com/store/apps/details?id=org.grakovne.lissen) or
+[F-Droid](https://f-droid.org/packages/org.grakovne.lissen). If you want the
+power-user extras below, welcome.
 
-<p align="center">
-  <img src="https://github.com/GrakovNe/lissen-android/raw/main/metadata/en-US/images/phoneScreenshots/2.png" alt="Screenshot 2" width="160">
-  <img src="https://github.com/GrakovNe/lissen-android/raw/main/metadata/en-US/images/phoneScreenshots/3.png" alt="Screenshot 3" width="160">
-  <img src="https://github.com/GrakovNe/lissen-android/raw/main/metadata/en-US/images/phoneScreenshots/4.png" alt="Screenshot 4" width="160">
-  <img src="https://github.com/GrakovNe/lissen-android/raw/main/metadata/en-US/images/phoneScreenshots/5.png" alt="Screenshot 5" width="160">
-  <img src="https://github.com/GrakovNe/lissen-android/raw/main/metadata/en-US/images/phoneScreenshots/6.png" alt="Screenshot 6" width="160">
-</p>
+### What's different
 
-### Disclaimer
+- **Download visibility** — every library row shows whether a book is downloaded
+  or downloading; a "downloaded first" sort works alongside every other sorter.
+- **Folders** — group books into your own local folders from the library screen.
+- **Multi-select** — long-press to select books, then bulk download, mark as
+  finished, or add to a folder.
+- **Smarter author grouping** — small authors' books flatten inline (sorted by
+  series); only prolific authors collapse into dropdowns, with a configurable
+  threshold.
+- **Opinionated player** — always-visible, scrollable chapter list (no
+  expand/collapse gestures), one-tap full-book download, sleep-timer presets
+  including 45 min.
+- **Audiobooks only** — podcast support is removed to keep the app simple. If you
+  listen to podcasts through Audiobookshelf, use the original Lissen.
 
-Lissen is not a clone of the official Audiobookshelf app and does not aim to replicate all of its features. 
-The goal of this project is to provide a minimalistic interface and a seamless experience for listening to audiobooks and podcasts.
+See [FORK_PLAN.md](FORK_PLAN.md) for the full roadmap and what's still in flight.
 
-If there’s a feature you feel is missing or would significantly improve your experience, feel free to open an issue and share your suggestion. 
-While not every feature request will be implemented, all ideas are welcome and will be thoughtfully considered.
+### Install
+
+Grab the APK from [GitHub Releases](../../releases) — works great with
+[Obtainium](https://github.com/ImranR98/Obtainium). The fork uses its own
+application id, so it installs alongside the original app.
 
 ### Building
 
 1. Clone the repository:
 ```
-git clone https://github.com/grakovne/lissen.git
+git clone https://github.com/mcdaniel67/lissen-android.git
 ```
 
-2. Setup the SDK into your local.properties file
-```
-nano local.properties
-```
+2. Set up the SDK path in your `local.properties`.
 
-3. Open the project in Android Studio or build it manually
+3. Build:
 ```
-./gradlew assembleDebug # Debug Build
-./gradlew assembleRelease # Release Build
+./gradlew assembleDebug   # Debug build
+./gradlew assembleRelease # Release build
 ```
-5. Build and run the app on an Android device or emulator.
 
 ### Localization
 
-Help us translate Lissen into more languages! We use [Weblate](https://hosted.weblate.org/engage/lissen/) to manage translations.
+Translations are inherited from upstream (managed there via
+[Weblate](https://hosted.weblate.org/engage/lissen/)). New fork-only strings are
+English-only and are not sent to Weblate — untranslated strings fall back to
+English.
 
-Current localization status:
+### Development
 
-<a href="https://hosted.weblate.org/engage/lissen/">
-<img src="https://hosted.weblate.org/widget/lissen/android-app/multi-auto.svg" alt="Translation status" />
-</a>
+This fork is developed in the open, largely with AI agents working from
+[FORK_PLAN.md](FORK_PLAN.md), with human review before merge.
 
-To contribute:
-1. Visit the [Lissen translation project](https://hosted.weblate.org/engage/lissen/).
-2. Sign up or log in to Weblate.
-3. Start translating or reviewing existing translations for your preferred language.
+### Credit & License
 
-### AI-Assisted Contributions
-
-AI-assisted development is welcome in this project and can be very useful when applied thoughtfully.
-
-However, any AI-generated changes that are not properly reviewed or tested will be discarded without hesitation.
-
-AI is a great tool, but until it can reliably understand the code it produces and the consequences of its changes, all AI-generated contributions must remain under strict human review.
-
-### Demo Environment
-
-You can connect to a demo [Audiobookshelf](https://github.com/advplyr/audiobookshelf) instance through the Lissen app:
-
-URL: [https://demo.lissenapp.org/](https://demo.lissenapp.org/)
-```
-Username: demo
-Password: demo
-```
-
-This instance is contains only Public Domain audiobooks from [LibriVox](https://librivox.org/)
-
-## License
-Lissen is open-source and licensed under the MIT License. See the LICENSE file for more details.
+All credit for the app's foundation goes to
+[GrakovNe](https://github.com/GrakovNe) and the upstream contributors.
+Lissen is open-source under the MIT License — see the LICENSE file.

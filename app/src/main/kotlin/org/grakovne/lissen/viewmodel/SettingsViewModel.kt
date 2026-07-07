@@ -115,6 +115,10 @@ class SettingsViewModel
 
     val libraryGrouping = preferences.libraryGroupingFlow
 
+    val authorGroupingThreshold = preferences.authorGroupingThresholdFlow
+
+    val downloadedFirst = preferences.downloadedFirstFlow
+
     private val _autoDownloadDelayed = MutableStateFlow(preferences.getAutoDownloadDelayed())
     val autoDownloadDelayed: StateFlow<Boolean> = _autoDownloadDelayed.asStateFlow()
 
@@ -172,6 +176,16 @@ class SettingsViewModel
     fun preferLibraryGrouping(grouping: LibraryGrouping) {
       Timber.d("User action: preferLibraryGrouping $grouping")
       preferences.saveLibraryGrouping(grouping)
+    }
+
+    fun preferAuthorGroupingThreshold(value: Int) {
+      Timber.d("User action: preferAuthorGroupingThreshold $value")
+      preferences.saveAuthorGroupingThreshold(value)
+    }
+
+    fun toggleDownloadedFirst() {
+      Timber.d("User action: toggleDownloadedFirst (current=${preferences.getDownloadedFirst()})")
+      preferences.saveDownloadedFirst(preferences.getDownloadedFirst().not())
     }
 
     fun logout() {

@@ -27,6 +27,7 @@ import org.grakovne.lissen.channel.audiobookshelf.library.converter.LibrarySearc
 import org.grakovne.lissen.channel.common.OperationResult
 import org.grakovne.lissen.channel.common.OperationResult.Success
 import org.grakovne.lissen.common.LibraryGrouping
+import org.grakovne.lissen.common.sortedBySeriesThenPosition
 import org.grakovne.lissen.domain.Book
 import org.grakovne.lissen.domain.DetailedItem
 import org.grakovne.lissen.domain.LibraryEntry
@@ -108,6 +109,15 @@ class LibraryAudiobookshelfChannel
             ).map { libraryAuthorsResponseConverter.apply(it) }
         }
 
+        LibraryGrouping.AUTHOR_SMART -> {
+          dataRepository
+            .fetchLibraryAuthors(
+              libraryId = libraryId,
+              pageSize = pageSize,
+              pageNumber = pageNumber,
+            ).map { flattenSmallAuthors(libraryId, libraryAuthorsResponseConverter.apply(it)) }
+        }
+
         else -> {
           val (option, direction) = libraryOrderingRequestConverter.apply(preferences.getLibraryOrdering())
           val filter = libraryFilteringRequestConverter.apply(preferences)
@@ -124,6 +134,47 @@ class LibraryAudiobookshelfChannel
             ).map { libraryPageResponseConverter.applyEntries(it) }
         }
       }
+
+    /**
+     * Collapses only prolific authors ([LibraryGrouping.AUTHOR_SMART]). Authors at or below the
+     * configured threshold have their books fetched and flattened inline as [LibraryEntry.BookEntry]
+     * rows, sorted by series; larger authors stay as [LibraryEntry.AuthorEntry] dropdowns.
+     */
+    private suspend fun flattenSmallAuthors(
+      libraryId: String,
+      paged: PagedItems<LibraryEntry>,
+    ): PagedItems<LibraryEntry> {
+      val threshold = preferences.getAuthorGroupingThreshold()
+
+      val items =
+        coroutineScope {
+          paged
+            .items
+            .map { entry ->
+              async {
+                when {
+                  entry is LibraryEntry.AuthorEntry && entry.bookCount <= threshold -> {
+                    fetchAuthorBooks(libraryId, entry.id).fold(
+                      onSuccess = { books -> books.sortedBySeriesThenPosition().map { LibraryEntry.BookEntry(it) } },
+                      onFailure = { listOf(entry) },
+                    )
+                  }
+
+                  else -> {
+                    listOf(entry)
+                  }
+                }
+              }
+            }.awaitAll()
+            .flatten()
+        }
+
+      return PagedItems(
+        items = items,
+        currentPage = paged.currentPage,
+        totalItems = paged.totalItems,
+      )
+    }
 
     override suspend fun fetchSeriesItems(
       libraryId: String,

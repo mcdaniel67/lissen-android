@@ -20,13 +20,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.grakovne.lissen.common.sortedBySeriesPosition
+import org.grakovne.lissen.common.sortedBySeriesThenPosition
 import org.grakovne.lissen.content.LissenMediaProvider
+import org.grakovne.lissen.content.folder.FolderRepository
 import org.grakovne.lissen.domain.Book
 import org.grakovne.lissen.domain.LibraryEntry
 import org.grakovne.lissen.domain.LibraryType
@@ -44,8 +47,26 @@ class LibraryViewModel
   constructor(
     private val mediaChannel: LissenMediaProvider,
     private val preferences: LissenSharedPreferences,
+    private val folderRepository: FolderRepository,
   ) : ViewModel() {
     internal var dispatcher: CoroutineDispatcher = Dispatchers.IO
+
+    val folders: StateFlow<List<LibraryEntry.FolderEntry>> =
+      folderRepository
+        .observeFolders()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val _selectedBooks = MutableStateFlow<Map<String, Book>>(emptyMap())
+
+    val selectedBookIds: StateFlow<Set<String>> =
+      _selectedBooks
+        .map { it.keys }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    val selectionActive: StateFlow<Boolean> =
+      _selectedBooks
+        .map { it.isNotEmpty() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val _recentBooks = MutableStateFlow<List<RecentBook>>(emptyList())
     val recentBooks: StateFlow<List<RecentBook>> = _recentBooks.asStateFlow()
@@ -125,6 +146,39 @@ class LibraryViewModel
       ).flow.cachedIn(viewModelScope)
     }
 
+    fun toggleSelection(book: Book) {
+      _selectedBooks.value =
+        _selectedBooks.value.toMutableMap().apply {
+          if (containsKey(book.id)) remove(book.id) else put(book.id, book)
+        }
+    }
+
+    fun clearSelection() {
+      _selectedBooks.value = emptyMap()
+    }
+
+    fun createFolder(name: String) {
+      val books = _selectedBooks.value.values.toList()
+      if (name.isBlank() || books.isEmpty()) {
+        return
+      }
+
+      Timber.d("User action: createFolder '$name' with ${books.size} items")
+      viewModelScope.launch {
+        folderRepository.createFolder(name, books)
+        clearSelection()
+        refreshLibrary()
+      }
+    }
+
+    fun deleteFolder(folderId: String) {
+      Timber.d("User action: deleteFolder $folderId")
+      viewModelScope.launch {
+        folderRepository.deleteFolder(folderId)
+        refreshLibrary()
+      }
+    }
+
     fun requestSearch() {
       Timber.d("User action: requestSearch")
       _searchRequested.value = true
@@ -179,6 +233,7 @@ class LibraryViewModel
       when (this) {
         is LibraryEntry.SeriesEntry -> id
         is LibraryEntry.AuthorEntry -> id
+        is LibraryEntry.FolderEntry -> id
         is LibraryEntry.BookEntry -> null
       }
 
@@ -190,6 +245,14 @@ class LibraryViewModel
         return
       }
 
+      if (entry is LibraryEntry.FolderEntry) {
+        _groupLoading.value = _groupLoading.value + groupId
+        val books = folderRepository.folderBooks(entry.id)
+        _groupBooks.value = _groupBooks.value + (groupId to books)
+        _groupLoading.value = _groupLoading.value - groupId
+        return
+      }
+
       val libraryId = preferences.getPreferredLibrary()?.id ?: return
 
       _groupLoading.value = _groupLoading.value + groupId
@@ -197,7 +260,7 @@ class LibraryViewModel
         when (entry) {
           is LibraryEntry.SeriesEntry -> mediaChannel.fetchSeriesItems(libraryId = libraryId, seriesId = entry.id)
           is LibraryEntry.AuthorEntry -> mediaChannel.fetchAuthorBooks(libraryId = libraryId, authorId = entry.id)
-          is LibraryEntry.BookEntry -> null
+          is LibraryEntry.BookEntry, is LibraryEntry.FolderEntry -> null
         }
 
       result?.fold(
@@ -205,6 +268,7 @@ class LibraryViewModel
           val ordered =
             when (entry) {
               is LibraryEntry.SeriesEntry -> books.sortedBySeriesPosition()
+              is LibraryEntry.AuthorEntry -> books.sortedBySeriesThenPosition()
               else -> books
             }
           _groupBooks.value = _groupBooks.value + (groupId to ordered)

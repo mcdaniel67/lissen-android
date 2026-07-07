@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.setMain
 import org.grakovne.lissen.channel.common.OperationError
 import org.grakovne.lissen.channel.common.OperationResult
 import org.grakovne.lissen.content.LissenMediaProvider
+import org.grakovne.lissen.content.folder.FolderRepository
 import org.grakovne.lissen.domain.Book
 import org.grakovne.lissen.domain.Library
 import org.grakovne.lissen.domain.LibraryEntry
@@ -33,12 +34,13 @@ class LibraryViewModelTest {
   private val testDispatcher = UnconfinedTestDispatcher()
   private val preferences = mockk<LissenSharedPreferences>(relaxed = true)
   private val mediaChannel = mockk<LissenMediaProvider>(relaxed = true)
+  private val folderRepository = mockk<FolderRepository>(relaxed = true)
   private lateinit var viewModel: LibraryViewModel
 
   @BeforeEach
   fun setup() {
     Dispatchers.setMain(testDispatcher)
-    viewModel = LibraryViewModel(mediaChannel, preferences)
+    viewModel = LibraryViewModel(mediaChannel, preferences, folderRepository)
     viewModel.dispatcher = testDispatcher
   }
 

@@ -10,6 +10,7 @@ import org.grakovne.lissen.common.LibraryGrouping
 import org.grakovne.lissen.content.cache.persistent.LocalCacheRepository
 import org.grakovne.lissen.content.cache.temporary.CachedBookmarkProvider
 import org.grakovne.lissen.content.cache.temporary.CachedCoverProvider
+import org.grakovne.lissen.content.folder.FolderRepository
 import org.grakovne.lissen.domain.Book
 import org.grakovne.lissen.domain.Bookmark
 import org.grakovne.lissen.domain.DetailedItem
@@ -37,6 +38,7 @@ class LissenMediaProvider
     private val localCacheRepository: LocalCacheRepository,
     private val cachedCoverProvider: CachedCoverProvider,
     private val cachedBookmarkProvider: CachedBookmarkProvider,
+    private val folderRepository: FolderRepository,
   ) {
     suspend fun dropBookmark(bookmark: Bookmark) {
       Timber.d("Dropping bookmark for ${bookmark.libraryItemId} at position=${bookmark.totalPosition.toInt()}s")
@@ -190,27 +192,110 @@ class LissenMediaProvider
     ): OperationResult<PagedItems<LibraryEntry>> {
       Timber.d("Fetching library: libraryId=$libraryId, page=$pageNumber, pageSize=$pageSize")
 
-      return when (preferences.isForceCache()) {
-        true -> {
-          localCacheRepository.fetchLibrary(
+      val grouping = preferences.getLibraryGrouping()
+
+      val foldedIds = folderRepository.foldedBookIds()
+
+      if (preferences.isForceCache()) {
+        return localCacheRepository
+          .fetchLibrary(
             libraryId = libraryId,
             pageSize = pageSize,
             pageNumber = pageNumber,
-            libraryGrouping = preferences.getLibraryGrouping(),
-          )
+            libraryGrouping = grouping,
+          ).filterFoldedBooks(foldedIds)
+      }
+
+      if (grouping == LibraryGrouping.NONE && preferences.getDownloadedFirst()) {
+        return fetchLibraryDownloadedFirst(
+          libraryId = libraryId,
+          pageSize = pageSize,
+          pageNumber = pageNumber,
+          foldedIds = foldedIds,
+        )
+      }
+
+      return providePreferredChannel()
+        .fetchLibrary(
+          libraryId = libraryId,
+          pageSize = pageSize,
+          pageNumber = pageNumber,
+          libraryGrouping = grouping,
+        ).filterFoldedBooks(foldedIds)
+    }
+
+    private suspend fun fetchLibraryDownloadedFirst(
+      libraryId: String,
+      pageSize: Int,
+      pageNumber: Int,
+      foldedIds: Set<String>,
+    ): OperationResult<PagedItems<LibraryEntry>> {
+      val cachedBooks = localCacheRepository.fetchCachedBooks(libraryId).filterNot { it.id in foldedIds }
+      if (cachedBooks.isEmpty()) {
+        return providePreferredChannel()
+          .fetchLibrary(
+            libraryId = libraryId,
+            pageSize = pageSize,
+            pageNumber = pageNumber,
+            libraryGrouping = LibraryGrouping.NONE,
+          ).filterFoldedBooks(foldedIds)
+      }
+
+      val cachedIds = cachedBooks.mapTo(mutableSetOf()) { it.id }
+      val startIndex = pageNumber * pageSize
+      val downloadedEntries =
+        cachedBooks
+          .drop(startIndex)
+          .take(pageSize)
+          .map { LibraryEntry.BookEntry(it) }
+
+      val remaining = pageSize - downloadedEntries.size
+      val remoteOffset = (startIndex - cachedBooks.size).coerceAtLeast(0)
+      val remoteFetchSize =
+        when (remaining) {
+          0 -> 1
+          else -> remoteOffset + remaining + cachedIds.size
         }
 
-        false -> {
-          providePreferredChannel()
-            .fetchLibrary(
-              libraryId = libraryId,
-              pageSize = pageSize,
-              pageNumber = pageNumber,
-              libraryGrouping = preferences.getLibraryGrouping(),
+      return providePreferredChannel()
+        .fetchLibrary(
+          libraryId = libraryId,
+          pageSize = remoteFetchSize,
+          pageNumber = 0,
+          libraryGrouping = LibraryGrouping.NONE,
+        ).map { paged ->
+          val remoteEntries =
+            paged.items
+              .filterNot { it is LibraryEntry.BookEntry && (it.book.id in cachedIds || it.book.id in foldedIds) }
+              .drop(remoteOffset)
+              .take(remaining)
+
+          PagedItems(
+            items = downloadedEntries + remoteEntries,
+            currentPage = pageNumber,
+            totalItems = paged.totalItems,
+          )
+        }
+    }
+
+    private suspend fun OperationResult<PagedItems<LibraryEntry>>.filterFoldedBooks(
+      foldedIds: Set<String>,
+    ): OperationResult<PagedItems<LibraryEntry>> =
+      when {
+        foldedIds.isEmpty() -> {
+          this
+        }
+
+        else -> {
+          map { paged ->
+            PagedItems(
+              items = paged.items.filterNot { it is LibraryEntry.BookEntry && it.book.id in foldedIds },
+              currentPage = paged.currentPage,
+              totalItems = paged.totalItems,
             )
+          }
         }
       }
-    }
 
     suspend fun fetchSeriesItems(
       libraryId: String,

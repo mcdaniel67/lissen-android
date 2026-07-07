@@ -1,6 +1,9 @@
 package org.grakovne.lissen.ui.screens.library.composables
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,7 +13,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.DownloadForOffline
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,6 +47,7 @@ import org.grakovne.lissen.ui.navigation.AppNavigationService
 
 val LibraryItemCoverSize = 64.dp
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BookComposable(
   book: Book,
@@ -46,6 +55,11 @@ fun BookComposable(
   navController: AppNavigationService,
   grouping: LibraryGrouping = LibraryGrouping.NONE,
   leading: (@Composable () -> Unit)? = null,
+  downloaded: Boolean = false,
+  selectionMode: Boolean = false,
+  selected: Boolean = false,
+  onSelectToggle: () -> Unit = {},
+  onLongClick: (() -> Unit)? = null,
 ) {
   val context = LocalContext.current
 
@@ -63,27 +77,72 @@ fun BookComposable(
     modifier =
       Modifier
         .fillMaxWidth()
-        .semantics(mergeDescendants = true) {}
-        .clickable(onClickLabel = openLabel, role = Role.Button) {
-          navController.showPlayer(book.id, book.title, book.subtitle)
-        }.testTag("bookItem_${book.id}")
+        .clip(RoundedCornerShape(8.dp))
+        .then(
+          if (selected) {
+            Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+          } else {
+            Modifier
+          },
+        ).semantics(mergeDescendants = true) {}
+        .combinedClickable(
+          onClickLabel = openLabel,
+          role = Role.Button,
+          onClick = {
+            if (selectionMode) {
+              onSelectToggle()
+            } else {
+              navController.showPlayer(book.id, book.title, book.subtitle)
+            }
+          },
+          onLongClick = onLongClick,
+        ).testTag("bookItem_${book.id}")
         .padding(horizontal = 4.dp, vertical = 8.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
     leading?.invoke()
 
-    AsyncShimmeringImage(
-      imageRequest = imageRequest,
-      imageLoader = imageLoader,
-      contentDescription = null,
-      contentScale = ContentScale.FillBounds,
-      modifier =
-        Modifier
-          .size(LibraryItemCoverSize)
-          .aspectRatio(1f)
-          .clip(RoundedCornerShape(4.dp)),
-      error = painterResource(R.drawable.cover_fallback),
-    )
+    Box {
+      AsyncShimmeringImage(
+        imageRequest = imageRequest,
+        imageLoader = imageLoader,
+        contentDescription = null,
+        contentScale = ContentScale.FillBounds,
+        modifier =
+          Modifier
+            .size(LibraryItemCoverSize)
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(4.dp)),
+        error = painterResource(R.drawable.cover_fallback),
+      )
+
+      if (selected) {
+        Box(
+          modifier =
+            Modifier
+              .matchParentSize()
+              .clip(RoundedCornerShape(4.dp))
+              .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f)),
+          contentAlignment = Alignment.Center,
+        ) {
+          Box(
+            modifier =
+              Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary),
+            contentAlignment = Alignment.Center,
+          ) {
+            Icon(
+              imageVector = Icons.Filled.Check,
+              contentDescription = null,
+              tint = MaterialTheme.colorScheme.onPrimary,
+              modifier = Modifier.size(22.dp),
+            )
+          }
+        }
+      }
+    }
 
     Spacer(Modifier.width(16.dp))
 
@@ -105,6 +164,19 @@ fun BookComposable(
       }
 
       BookMetadataComposable(book, grouping)
+    }
+
+    if (downloaded) {
+      Spacer(Modifier.width(12.dp))
+      Icon(
+        imageVector = Icons.Outlined.DownloadForOffline,
+        contentDescription = stringResource(R.string.library_item_downloaded_indicator),
+        tint = MaterialTheme.colorScheme.primary,
+        modifier =
+          Modifier
+            .size(20.dp)
+            .testTag("downloadedIndicator_${book.id}"),
+      )
     }
 
     Spacer(Modifier.width(16.dp))

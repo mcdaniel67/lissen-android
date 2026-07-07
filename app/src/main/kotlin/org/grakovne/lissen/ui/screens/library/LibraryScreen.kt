@@ -32,15 +32,23 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -58,6 +66,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -85,6 +94,7 @@ import org.grakovne.lissen.ui.screens.common.RequestNotificationPermissions
 import org.grakovne.lissen.ui.screens.library.composables.AuthorComposable
 import org.grakovne.lissen.ui.screens.library.composables.BookComposable
 import org.grakovne.lissen.ui.screens.library.composables.DefaultActionComposable
+import org.grakovne.lissen.ui.screens.library.composables.FolderComposable
 import org.grakovne.lissen.ui.screens.library.composables.LibrarySearchActionComposable
 import org.grakovne.lissen.ui.screens.library.composables.LibrarySwitchComposable
 import org.grakovne.lissen.ui.screens.library.composables.MiniPlayerComposable
@@ -136,6 +146,12 @@ fun LibraryScreen(
 
   val library = libraryViewModel.getPager(searchRequested).collectAsLazyPagingItems()
   val libraryCount by libraryViewModel.totalCount.collectAsState()
+  val selectionActive by libraryViewModel.selectionActive.collectAsState()
+  val selectedBookIds by libraryViewModel.selectedBookIds.collectAsState()
+  val downloadedIds by cachingModelView.cachedBookIds.collectAsState()
+  val folders by libraryViewModel.folders.collectAsState()
+  var showCreateFolder by remember { mutableStateOf(false) }
+  var folderPendingDelete by remember { mutableStateOf<LibraryEntry.FolderEntry?>(null) }
   val expandedGroups by libraryViewModel.expandedGroups.collectAsState()
   val groupBooks by libraryViewModel.groupBooks.collectAsState()
   val groupLoading by libraryViewModel.groupLoading.collectAsState()
@@ -145,6 +161,7 @@ fun LibraryScreen(
 
   BackHandler {
     when {
+      selectionActive -> libraryViewModel.clearSelection()
       searchRequested && linkedSearchToken != null -> navController.goBack()
       searchRequested -> libraryViewModel.dismissSearch()
       else -> activity?.moveTaskToBack(true)
@@ -296,77 +313,85 @@ fun LibraryScreen(
 
   Scaffold(
     topBar = {
-      TopAppBar(
-        actions = {
-          AnimatedContent(
-            targetState = searchRequested,
-            label = "library_action_animation",
-            transitionSpec = {
-              fadeIn(animationSpec = keyframes { durationMillis = 150 }) togetherWith
-                fadeOut(animationSpec = keyframes { durationMillis = 150 })
-            },
-          ) { isSearchRequested ->
-            when (isSearchRequested) {
-              true -> {
-                LibrarySearchActionComposable(
-                  currentSearchToken = searchToken,
-                  autoFocus = linkedSearchToken == null,
-                  onSearchDismissed = {
-                    when (linkedSearchToken) {
-                      null -> libraryViewModel.dismissSearch()
-                      else -> navController.goBack()
+      if (selectionActive) {
+        SelectionTopBar(
+          count = selectedBookIds.size,
+          onClose = { libraryViewModel.clearSelection() },
+          onCreateFolder = { showCreateFolder = true },
+        )
+      } else {
+        TopAppBar(
+          actions = {
+            AnimatedContent(
+              targetState = searchRequested,
+              label = "library_action_animation",
+              transitionSpec = {
+                fadeIn(animationSpec = keyframes { durationMillis = 150 }) togetherWith
+                  fadeOut(animationSpec = keyframes { durationMillis = 150 })
+              },
+            ) { isSearchRequested ->
+              when (isSearchRequested) {
+                true -> {
+                  LibrarySearchActionComposable(
+                    currentSearchToken = searchToken,
+                    autoFocus = linkedSearchToken == null,
+                    onSearchDismissed = {
+                      when (linkedSearchToken) {
+                        null -> libraryViewModel.dismissSearch()
+                        else -> navController.goBack()
+                      }
+                    },
+                    onSearchRequested = { libraryViewModel.updateSearch(it) },
+                  )
+                }
+
+                false -> {
+                  DefaultActionComposable(
+                    onSearchRequested = { libraryViewModel.requestSearch() },
+                    onPreferencesRequested = { preferencesExpanded = true },
+                  )
+                }
+              }
+            }
+          },
+          title = {
+            if (!searchRequested) {
+              Row(
+                modifier =
+                  when (navBarTitle) {
+                    libraryTitle -> {
+                      Modifier
+                        .clickable(
+                          interactionSource = remember { MutableInteractionSource() },
+                          indication = null,
+                        ) { preferredLibraryExpanded = true }
+                        .fillMaxWidth()
+                    }
+
+                    else -> {
+                      Modifier.fillMaxWidth()
                     }
                   },
-                  onSearchRequested = { libraryViewModel.updateSearch(it) },
-                )
-              }
-
-              false -> {
-                DefaultActionComposable(
-                  onSearchRequested = { libraryViewModel.requestSearch() },
-                  onPreferencesRequested = { preferencesExpanded = true },
-                )
-              }
-            }
-          }
-        },
-        title = {
-          if (!searchRequested) {
-            Row(
-              modifier =
-                when (navBarTitle) {
-                  libraryTitle -> {
+              ) {
+                Text(
+                  text = navBarTitle,
+                  style = titleTextStyle,
+                  maxLines = 1,
+                  modifier =
                     Modifier
-                      .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                      ) { preferredLibraryExpanded = true }
-                      .fillMaxWidth()
-                  }
+                      .testTag("libraryNavBarTitle")
+                      .semantics { heading() },
+                )
 
-                  else -> {
-                    Modifier.fillMaxWidth()
-                  }
-                },
-            ) {
-              Text(
-                text = navBarTitle,
-                style = titleTextStyle,
-                maxLines = 1,
-                modifier =
-                  Modifier
-                    .testTag("libraryNavBarTitle")
-                    .semantics { heading() },
-              )
-
-              if (navBarTitle == libraryTitle) {
-                LibrarySwitchComposable { preferredLibraryExpanded = true }
+                if (navBarTitle == libraryTitle) {
+                  LibrarySwitchComposable { preferredLibraryExpanded = true }
+                }
               }
             }
-          }
-        },
-        modifier = Modifier.systemBarsPadding(),
-      )
+          },
+          modifier = Modifier.systemBarsPadding(),
+        )
+      }
     },
     bottomBar = {
       playingBook?.let {
@@ -506,6 +531,23 @@ fun LibraryScreen(
             }
           }
 
+          if (!searchRequested && !isPlaceholderRequired && folders.isNotEmpty()) {
+            items(count = folders.size, key = { "folder_${folders[it].id}" }) { index ->
+              val folder = folders[index]
+              FolderComposable(
+                folder = folder,
+                expanded = folder.id in expandedGroups,
+                loading = folder.id in groupLoading,
+                books = groupBooks[folder.id].orEmpty(),
+                imageLoader = imageLoader,
+                navController = navController,
+                onToggle = { libraryViewModel.toggleGroup(folder) },
+                onLongClick = { folderPendingDelete = folder },
+                downloadedIds = downloadedIds,
+              )
+            }
+          }
+
           when {
             isPlaceholderRequired -> {
               item(span = { GridItemSpan(maxLineSpan) }) { LibraryPlaceholderComposable() }
@@ -531,6 +573,11 @@ fun LibraryScreen(
                       imageLoader = imageLoader,
                       navController = navController,
                       grouping = libraryGrouping,
+                      downloaded = entry.book.id in downloadedIds,
+                      selectionMode = selectionActive,
+                      selected = entry.book.id in selectedBookIds,
+                      onSelectToggle = { libraryViewModel.toggleSelection(entry.book) },
+                      onLongClick = { libraryViewModel.toggleSelection(entry.book) },
                     )
                   }
 
@@ -544,6 +591,7 @@ fun LibraryScreen(
                       navController = navController,
                       onToggle = { libraryViewModel.toggleGroup(entry) },
                       onPrefetch = { libraryViewModel.prefetchGroup(entry) },
+                      downloadedIds = downloadedIds,
                     )
                   }
 
@@ -557,7 +605,12 @@ fun LibraryScreen(
                       navController = navController,
                       onToggle = { libraryViewModel.toggleGroup(entry) },
                       onPrefetch = { libraryViewModel.prefetchGroup(entry) },
+                      downloadedIds = downloadedIds,
                     )
+                  }
+
+                  is LibraryEntry.FolderEntry -> {
+                    Unit
                   }
                 }
               }
@@ -624,6 +677,119 @@ fun LibraryScreen(
       },
     )
   }
+
+  if (showCreateFolder) {
+    CreateFolderDialog(
+      count = selectedBookIds.size,
+      onDismiss = { showCreateFolder = false },
+      onConfirm = { name ->
+        libraryViewModel.createFolder(name)
+        showCreateFolder = false
+      },
+    )
+  }
+
+  folderPendingDelete?.let { folder ->
+    AlertDialog(
+      onDismissRequest = { folderPendingDelete = null },
+      title = { Text(stringResource(R.string.library_folder_delete_title)) },
+      text = { Text(stringResource(R.string.library_folder_delete_message, folder.name)) },
+      confirmButton = {
+        TextButton(onClick = {
+          libraryViewModel.deleteFolder(folder.id)
+          folderPendingDelete = null
+        }) {
+          Text(stringResource(R.string.library_folder_delete_confirm))
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { folderPendingDelete = null }) {
+          Text(stringResource(R.string.library_folder_dialog_cancel))
+        }
+      },
+    )
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SelectionTopBar(
+  count: Int,
+  onClose: () -> Unit,
+  onCreateFolder: () -> Unit,
+) {
+  TopAppBar(
+    navigationIcon = {
+      IconButton(onClick = onClose) {
+        Icon(
+          imageVector = Icons.Outlined.Close,
+          contentDescription = stringResource(R.string.library_selection_clear),
+        )
+      }
+    },
+    title = {
+      Text(
+        text = stringResource(R.string.library_selection_count, count),
+        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+        maxLines = 1,
+      )
+    },
+    actions = {
+      IconButton(
+        onClick = onCreateFolder,
+        enabled = count > 0,
+      ) {
+        Icon(
+          imageVector = Icons.Outlined.CreateNewFolder,
+          contentDescription = stringResource(R.string.library_selection_create_folder),
+        )
+      }
+    },
+    modifier = Modifier.systemBarsPadding(),
+  )
+}
+
+@Composable
+private fun CreateFolderDialog(
+  count: Int,
+  onDismiss: () -> Unit,
+  onConfirm: (String) -> Unit,
+) {
+  var name by remember { mutableStateOf("") }
+
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = { Text(stringResource(R.string.library_folder_create_title)) },
+    text = {
+      Column {
+        Text(
+          text = stringResource(R.string.library_folder_create_message, count),
+          style = MaterialTheme.typography.bodyMedium,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+          value = name,
+          onValueChange = { name = it },
+          singleLine = true,
+          label = { Text(stringResource(R.string.library_folder_create_hint)) },
+          modifier = Modifier.fillMaxWidth().testTag("createFolderNameField"),
+        )
+      }
+    },
+    confirmButton = {
+      TextButton(
+        onClick = { onConfirm(name) },
+        enabled = name.isNotBlank(),
+      ) {
+        Text(stringResource(R.string.library_folder_create_confirm))
+      }
+    },
+    dismissButton = {
+      TextButton(onClick = onDismiss) {
+        Text(stringResource(R.string.library_folder_dialog_cancel))
+      }
+    },
+  )
 }
 
 private val RECENT_SECTION_SPACING = 2.dp

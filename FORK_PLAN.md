@@ -467,7 +467,23 @@ hide-foldered-books) leave the flat list.
 
 ---
 
-### WP-8 — Wipe folders on server change (bug fix)
+### WP-8 — Wipe folders on server change (bug fix) ✅ DONE 2026-07-08
+
+> Landed on `main`. `FolderRepository`/`LocalFolderRepository` gained `clear()` +
+> `folderCount()`; `FolderDao` got transactional `clear()` (`DELETE FROM folder_items`
+> then `folders`). `LissenSharedPreferences` gained `KEY_FOLDERS_HOST` +
+> `saveFoldersHost()`/`getFoldersHost()`; `LocalFolderRepository.createFolder` records the
+> current host. Wipe hook: `LissenMediaProvider.onPostLogin` → `wipeFoldersOnServerChange`
+> (only when `host != getFoldersHost() && folderCount() > 0`) — covers password + OAuth
+> login; same-host re-login preserves folders. +7 unit tests.
+>
+> **Plan self-conflict resolved (Kyle decided 2026-07-08):** step 4 assumed
+> `clearCredentials()` was the explicit disconnect button, but it's the automatic
+> token-refresh-failure path. The agent's first cut wiped folders there, which would drop
+> them on routine same-server session expiry. **Removed** that wipe
+> (`AudioBookShelfApiService`) and the now-unused `FolderRepository` injection — the
+> login-time host-change guard is the sole, sufficient wipe trigger. Folders now survive
+> same-server token expiry; still wiped when the server actually changes at next login.
 
 **Goal:** folders created against server A must not survive pointing the app at
 server B (dead book ids). Decision: **wipe, not scope** — simplest correct

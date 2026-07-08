@@ -14,7 +14,6 @@ import org.grakovne.lissen.channel.audiobookshelf.Host
 import org.grakovne.lissen.channel.audiobookshelf.common.client.AudiobookshelfApiClient
 import org.grakovne.lissen.channel.audiobookshelf.common.converter.LoginResponseConverter
 import org.grakovne.lissen.channel.common.OperationResult
-import org.grakovne.lissen.content.folder.FolderRepository
 import org.grakovne.lissen.domain.connection.ServerRequestHeader
 import org.grakovne.lissen.persistence.preferences.LissenSharedPreferences
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -31,7 +30,6 @@ class AudioBookShelfApiServiceClientCacheTest {
   private val preferences = mockk<LissenSharedPreferences>(relaxed = true)
   private val requestHeadersProvider = mockk<RequestHeadersProvider>()
   private val loginResponseConverter = mockk<LoginResponseConverter>(relaxed = true)
-  private val folderRepository = mockk<FolderRepository>(relaxed = true)
 
   private val factoryCalls = AtomicInteger(0)
 
@@ -54,7 +52,6 @@ class AudioBookShelfApiServiceClientCacheTest {
         preferences = preferences,
         requestHeadersProvider = requestHeadersProvider,
         loginResponseConverter = loginResponseConverter,
-        folderRepository = folderRepository,
       )
 
     service.clientFactory = {

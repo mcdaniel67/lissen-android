@@ -526,7 +526,22 @@ This package just proves it survived the WP-0 merge.
 
 ---
 
-### WP-11 — Download indicators on library + recent rows
+### WP-11 — Download indicators on library + recent rows ✅ DONE 2026-07-08
+
+> Landed on `main` (`00b944be`). List-wide, no per-row flow: `CachingModelView` gained
+> `runningDownloads: StateFlow<Map<String, Double>>` (maintained in the existing
+> `statusFlow` collector) + pure `downloadStateOf(bookId, cachedIds, running)`.
+> `LibraryScreen` collects `cachedBookIds` + `runningDownloads` once and threads a
+> `(String) -> BookDownloadState` resolver into rows. `BookComposable` swaps
+> `DownloadForOffline` for the shared `DownloadStateIcon` (keeps `downloadedIndicator_<id>`
+> testTag; shows nothing when not-downloaded). Group headers (Series/Author/Folder) show
+> the badge only when all children cached (no ring). Recent cards get a scrim-backed corner
+> overlay (distinct `recentDownloadedIndicator_<id>` testTag to avoid dup matches).
+> `DownloadStateIcon` gained an optional `contentDescription` (nav-bar call unchanged) +
+> an a11y label on the ring. New string `library_item_downloading_indicator`. +tests in
+> `CachingModelViewTest`; lint + unit tests + assemblePersonal green. Residual: on-device
+> ring→badge live transition, recent-overlay legibility, and `LibraryE2ETest` badge
+> assertion (deferred — needs a real cached-book fixture).
 
 **Goal:** vault item 3 ("better download statuses"): library rows show three
 states — nothing / downloading ring / downloaded badge — and the Recent Books

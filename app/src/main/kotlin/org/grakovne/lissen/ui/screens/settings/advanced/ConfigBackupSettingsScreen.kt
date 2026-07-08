@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +37,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import kotlinx.coroutines.launch
 import org.grakovne.lissen.R
 import org.grakovne.lissen.common.restartApplication
 import org.grakovne.lissen.common.shareFile
@@ -55,6 +57,8 @@ fun ConfigBackupSettingsScreen(onBack: () -> Unit) {
   val exportChooserTitle = stringResource(R.string.export_config_title)
   val appName = stringResource(R.string.app_name)
 
+  val scope = rememberCoroutineScope()
+
   val importLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
       val json =
@@ -64,18 +68,23 @@ fun ConfigBackupSettingsScreen(onBack: () -> Unit) {
           }.getOrNull()
         }
 
-      importSucceeded = json != null && viewModel.importSettingsJson(json)
+      scope.launch {
+        importSucceeded = json != null && viewModel.importSettingsJson(json)
 
-      if (uri != null && !importSucceeded) {
-        Toast.makeText(context, importFailedToast, Toast.LENGTH_SHORT).show()
+        if (uri != null && !importSucceeded) {
+          Toast.makeText(context, importFailedToast, Toast.LENGTH_SHORT).show()
+        }
       }
     }
 
   val onExport = {
-    viewModel
-      .provideConfigArchive()
-      ?.let { context.shareFile(it, "application/json", exportChooserTitle, "$appName settings") }
-      ?: Toast.makeText(context, exportFailedToast, Toast.LENGTH_SHORT).show()
+    scope.launch {
+      viewModel
+        .provideConfigArchive()
+        ?.let { context.shareFile(it, "application/json", exportChooserTitle, "$appName settings") }
+        ?: Toast.makeText(context, exportFailedToast, Toast.LENGTH_SHORT).show()
+    }
+    Unit
   }
 
   Scaffold(

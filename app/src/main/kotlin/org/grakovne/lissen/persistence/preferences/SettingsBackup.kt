@@ -35,8 +35,29 @@ data class SettingsBackup(
   val userAgent: String? = null,
   val customHeaders: List<ServerRequestHeader>? = null,
   val localUrls: List<LocalUrl>? = null,
+  val folders: List<FolderBackup>? = null,
+  val foldersHost: String? = null,
 ) {
   companion object {
-    const val SCHEMA_VERSION = 1
+    const val SCHEMA_VERSION = 2
   }
 }
+
+@Keep
+@JsonClass(generateAdapter = true)
+data class FolderBackup(
+  val id: String,
+  val name: String,
+  val createdAt: Long,
+  val books: List<FolderBookBackup>,
+)
+
+@Keep
+@JsonClass(generateAdapter = true)
+data class FolderBookBackup(
+  val id: String,
+  val title: String,
+  val subtitle: String? = null,
+  val author: String? = null,
+  val series: String? = null,
+)

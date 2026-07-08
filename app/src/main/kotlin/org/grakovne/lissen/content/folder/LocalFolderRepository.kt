@@ -78,6 +78,27 @@ class LocalFolderRepository
 
     override suspend fun folderCount(): Int = folderDao.folderCount()
 
+    override suspend fun exportFolders(): List<FolderExport> =
+      folderDao
+        .folders()
+        .map { folder ->
+          FolderExport(
+            id = folder.id,
+            name = folder.name,
+            createdAt = folder.createdAt,
+            books = folderDao.folderItems(folder.id).map { it.toBook() },
+          )
+        }
+
+    override suspend fun importFolders(folders: List<FolderExport>) {
+      folders.forEach { folder ->
+        folderDao.replaceFolder(
+          FolderEntity(id = folder.id, name = folder.name, createdAt = folder.createdAt),
+          folder.books.toItems(folder.id, startPosition = 0),
+        )
+      }
+    }
+
     override suspend fun clear() = folderDao.clear()
 
     private fun List<Book>.toItems(

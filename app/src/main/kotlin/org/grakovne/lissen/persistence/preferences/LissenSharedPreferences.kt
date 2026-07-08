@@ -621,6 +621,7 @@ class LissenSharedPreferences
         userAgent = getUserAgent(),
         customHeaders = getCustomHeaders(),
         localUrls = getLocalUrls(),
+        foldersHost = getFoldersHost(),
       )
     }
 
@@ -678,6 +679,7 @@ class LissenSharedPreferences
       backup.userAgent?.let { saveUserAgent(it) }
       backup.customHeaders?.let { saveCustomHeaders(it) }
       backup.localUrls?.let { saveLocalUrls(it) }
+      backup.foldersHost?.let { saveFoldersHost(it) }
     }
 
     fun getDefaultTimerOption(): TimerOption? {

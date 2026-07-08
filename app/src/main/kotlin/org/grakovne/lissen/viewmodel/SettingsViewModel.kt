@@ -127,12 +127,12 @@ class SettingsViewModel
 
     fun provideLogArchive(): File? = logProvider.archiveLogFile()
 
-    fun provideConfigArchive(): File? {
+    suspend fun provideConfigArchive(): File? {
       Timber.d("User action: provideConfigArchive")
       return configProvider.exportConfigFile()
     }
 
-    fun importSettingsJson(json: String): Boolean {
+    suspend fun importSettingsJson(json: String): Boolean {
       Timber.d("User action: importSettingsJson")
       return configProvider.importConfig(json)
     }

@@ -1,5 +1,6 @@
 package org.grakovne.lissen.viewmodel
 
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -8,6 +9,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.grakovne.lissen.channel.common.DEFAULT_USER_AGENT
 import org.grakovne.lissen.channel.common.OperationResult
@@ -712,25 +714,28 @@ class SettingsViewModelTest {
   @Nested
   inner class ConfigBackup {
     @Test
-    fun `provideConfigArchive delegates to the config provider`() {
-      val file = java.io.File("lissen-settings.json")
-      every { configProvider.exportConfigFile() } returns file
+    fun `provideConfigArchive delegates to the config provider`() =
+      runTest {
+        val file = java.io.File("lissen-settings.json")
+        coEvery { configProvider.exportConfigFile() } returns file
 
-      assertEquals(file, viewModel.provideConfigArchive())
-    }
-
-    @Test
-    fun `importSettingsJson returns true when the config provider imports successfully`() {
-      every { configProvider.importConfig(any()) } returns true
-
-      assertTrue(viewModel.importSettingsJson("{}"))
-    }
+        assertEquals(file, viewModel.provideConfigArchive())
+      }
 
     @Test
-    fun `importSettingsJson returns false when the config provider rejects the input`() {
-      every { configProvider.importConfig(any()) } returns false
+    fun `importSettingsJson returns true when the config provider imports successfully`() =
+      runTest {
+        coEvery { configProvider.importConfig(any()) } returns true
 
-      assertFalse(viewModel.importSettingsJson("not valid json"))
-    }
+        assertTrue(viewModel.importSettingsJson("{}"))
+      }
+
+    @Test
+    fun `importSettingsJson returns false when the config provider rejects the input`() =
+      runTest {
+        coEvery { configProvider.importConfig(any()) } returns false
+
+        assertFalse(viewModel.importSettingsJson("not valid json"))
+      }
   }
 }

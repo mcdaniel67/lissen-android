@@ -44,6 +44,16 @@ interface FolderRepository {
   /** Number of folders currently stored, regardless of how many books each holds. */
   suspend fun folderCount(): Int
 
+  /** Full snapshot of every folder and its books, for configuration backup. */
+  suspend fun exportFolders(): List<FolderExport>
+
+  /**
+   * Restores folders from a backup, replacing any existing folder with the same id. Does not touch
+   * [KEY_FOLDERS_HOST][org.grakovne.lissen.persistence.preferences.LissenSharedPreferences] — the
+   * caller sets that from the backup so the server-change wipe doesn't immediately clear them.
+   */
+  suspend fun importFolders(folders: List<FolderExport>)
+
   /**
    * Wipes every folder and its membership. Used when the app is pointed at a different server
    * (folder book ids are server-scoped and would be dead) or on explicit logout.

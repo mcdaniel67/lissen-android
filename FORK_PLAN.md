@@ -182,7 +182,16 @@ Lissen on a device; login + playback work; README renders correctly on GitHub.
 
 ---
 
-### WP-2 — DownloadState backbone (needed by WP-4, WP-11)
+### WP-2 — DownloadState backbone (needed by WP-4, WP-11) ✅ DONE 2026-07-07
+
+> Landed on `main` (`d65fcb28`). Added `domain/BookDownloadState.kt` (kept separate
+> from the persistence-layer `CacheState`), `CachingModelView.downloadState()`
+> combining live progress + `cachedBookIds`, and shared
+> `ui/components/DownloadStateIcon.kt` (size-parameterized). `NavigationBarComposable`
+> now renders via the shared icon but still only maps ring/cloud (no "completed"
+> nav-bar icon) — consumers of the full 3-state model arrive in WP-4/WP-11. 4 new
+> `CachingModelViewTest` cases; no visible UI change.
+
 
 **Goal:** one shared model answering "what is the download state of book X?" that
 every surface (library rows, group rows, player nav bar) consumes. Today this is
@@ -214,7 +223,17 @@ session progress) and `cachedBookIds: StateFlow<Set<String>>` (completed set).
 
 ---
 
-### WP-3 — Player restructure: fixed layout, scrollable chapters
+### WP-3 — Player restructure: fixed layout, scrollable chapters ✅ DONE 2026-07-07
+
+> Landed on `main` (`0be31c92`). Expand/collapse state machine deleted from
+> `PlayerViewModel`, `PlayingQueueComposable`, `PlayerScreen`, `NavigationBarComposable`
+> (QueueMusic item gone), and the `forceExpanded` plumbing removed. Compact header is
+> a **sibling** `PlayerCompactHeader` (not a `compact` flag on the wide variant).
+> Auto-scroll-to-current gated on `!listState.isScrollInProgress` — a chapter change
+> mid-drag won't recenter until the scroll settles / next change (tap-to-jump still
+> recenters). E2E tests updated but not run here (no device). **Needs on-device pass:**
+> short screens (<600dp), centered-scroll feel, long-title ellipsize.
+
 
 > **Agent note: Opus-class (or better) model required.** This package deletes a
 > state machine woven through four files and involves real layout/UX judgment
@@ -316,7 +335,16 @@ light up when non-default. Works offline-gracefully. No reference to
 
 ---
 
-### WP-5 — Sleep timer: presets + stepper, no wheel
+### WP-5 — Sleep timer: presets + stepper, no wheel ✅ DONE 2026-07-07
+
+> Landed on `main` (`9701af74`). Presets `[Off, 10, 15, 30, 45, 60, end-of-chapter]`
+> in a `FlowRow` (7×56dp don't fit 360dp → wraps 5+2). `SleepTimerSlider.kt` deleted;
+> `CommonSlider.kt` kept. Custom `[−] 25m [+]` stepper (range 5–120, step 5) is a
+> hand-rolled row matching `ChaptersCountStepper`'s style rather than reusing it;
+> displayed value derives from `currentOption` so custom values survive sheet reopen
+> with no local state. 4 new English strings. `libraryType` stays live as the
+> end-of-chapter icon's a11y `contentDescription` (LIBRARY→chapter; else→episode).
+
 
 **Goal:** vault item 6. Presets Off / 10 / 15 / 30 / 45 / 60 / end-of-chapter plus
 a custom stepper; delete the wheel.

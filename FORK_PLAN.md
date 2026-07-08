@@ -432,7 +432,21 @@ after refresh without app restart.
 
 ---
 
-### WP-7 — Multi-select actions: mark finished, download, add-to-folder
+### WP-7 — Multi-select actions: mark finished, download, add-to-folder ✅ DONE 2026-07-08
+
+> Landed on `main` (`95e4da40`). `SelectionTopBar` gains Download / Mark-finished /
+> Add-to-folder alongside the existing create-folder. Download →
+> `CachingModelView.cacheByIds` (new): one full-book caching task per selected id via the
+> existing `ContentCachingService` queue — the service fetches each book itself, so no
+> `fetchBook` loop is needed and per-book progress surfaces through the WP-2/WP-11
+> `runningDownloads`/`downloadState` flows. Mark-finished →
+> `LibraryViewModel.markSelectionFinished` calls WP-6's `markAsListened` per book, refreshes,
+> and emits a one-shot `markFinishedFailures` count (shown as a toast) without aborting the
+> batch. Add-to-folder → `AddToFolderDialog` lists existing folders (tap-to-add, not radio —
+> simpler) with a "New folder…" row falling through to the create-folder dialog;
+> `addSelectionToFolder` calls `folderRepository.addBooks`. All actions `clearSelection()`.
+> +6 `LibraryViewModelTest` cases. Residual: on-device 360dp top-bar crowding (4 actions +
+> title) and live ABS finished-flip.
 
 **Goal:** vault items 1 + 2. The existing selection mode (long-press → checkboxes
 → `SelectionTopBar` with count + create-folder) gains three actions.
@@ -646,7 +660,22 @@ libraries; player, downloads, timer all work; Android Auto browse works.
 
 ---
 
-### WP-13 — Folders in config backup/restore
+### WP-13 — Folders in config backup/restore ✅ DONE 2026-07-08
+
+> Landed on `main` (`46a6419b`). `SettingsBackup` gains `folders` (id/name/createdAt +
+> denormalized book snapshots) and `foldersHost`; `SCHEMA_VERSION` → 2. **Deviation from the
+> plan's `bookIds: [...]`:** folder items store denormalized book metadata (title/author/…)
+> so folders render offline — storing bare ids would lose that, so the backup snapshots the
+> full `Book` fields. `FolderRepository.exportFolders`/`importFolders` (+ `FolderDao.folders()`);
+> import replaces by id, preserving id + createdAt. `LissenConfigProvider` is now `suspend`
+> (embeds folders on export, restores on import, all on `Dispatchers.IO`);
+> `ConfigBackupSettingsScreen` launches the export/import in a `rememberCoroutineScope`.
+> `foldersHost` round-trips as a plain preference (in `exportSettings`/`importSettings`) so
+> WP-8's server-change wipe doesn't clear restored folders. Nullable `folders` default means
+> an upstream backup (no `folders` key) restores unchanged. +2 `LocalFolderRepositoryTest`,
+> rewrote `LissenConfigProviderTest` (folder round-trip + upstream-format), `SettingsViewModelTest`
+> updated for the suspend methods. Note: a pre-existing `CachedBookGroupingTest` androidTest
+> non-exhaustive-`when` break is unrelated (needs a device; not in the unit-test CI).
 
 **Goal:** folders are the only fork-local data with no server copy. Upstream's
 Configuration Backup & Restore (#456) exports preferences — extend it to carry

@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -28,6 +29,7 @@ import org.grakovne.lissen.content.cache.persistent.ContentCachingService
 import org.grakovne.lissen.content.cache.persistent.LocalCacheRepository
 import org.grakovne.lissen.content.cache.temporary.CachedCoverProvider
 import org.grakovne.lissen.content.cache.temporary.SeriesCoverProvider
+import org.grakovne.lissen.domain.BookDownloadState
 import org.grakovne.lissen.domain.CacheStatus
 import org.grakovne.lissen.domain.ContentCachingTask
 import org.grakovne.lissen.domain.DetailedItem
@@ -132,6 +134,20 @@ class CachingModelView
     fun getProgress(bookId: String) =
       _bookCachingProgress
         .getOrPut(bookId) { MutableStateFlow(CacheState(CacheStatus.Idle)) }
+
+    /**
+     * Single source of truth for "what is the download state of this book" — combines the live
+     * in-progress caching flow with membership in the completed-download set so every surface
+     * (library rows, group rows, player nav bar) can render a consistent download badge.
+     */
+    fun downloadState(bookId: String): Flow<BookDownloadState> =
+      combine(getProgress(bookId), cachedBookIds) { progress, cachedIds ->
+        when {
+          bookId in cachedIds -> BookDownloadState.Downloaded
+          progress.status is CacheStatus.Caching -> BookDownloadState.Downloading(progress.progress)
+          else -> BookDownloadState.NotDownloaded
+        }
+      }
 
     suspend fun dropCache(bookId: String) {
       Timber.d("User action: dropCache $bookId")

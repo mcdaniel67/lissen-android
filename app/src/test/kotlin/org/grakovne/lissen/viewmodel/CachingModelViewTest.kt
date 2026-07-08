@@ -9,7 +9,10 @@ import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -20,6 +23,7 @@ import org.grakovne.lissen.content.cache.persistent.ContentCachingProgress
 import org.grakovne.lissen.content.cache.persistent.LocalCacheRepository
 import org.grakovne.lissen.content.cache.temporary.CachedCoverProvider
 import org.grakovne.lissen.content.cache.temporary.SeriesCoverProvider
+import org.grakovne.lissen.domain.BookDownloadState
 import org.grakovne.lissen.domain.CacheStatus
 import org.grakovne.lissen.domain.DetailedItem
 import org.grakovne.lissen.persistence.preferences.LissenSharedPreferences
@@ -102,6 +106,76 @@ class CachingModelViewTest {
         val progress = viewModel.getProgress("book-1")
         assertEquals(CacheStatus.Caching, progress.value.status)
         assertEquals(0.5, progress.value.progress)
+      }
+  }
+
+  @Nested
+  inner class DownloadState {
+    @Test
+    fun `downloadState is NotDownloaded when there is no progress and book is not cached`() =
+      runTest(testDispatcher) {
+        val state = viewModel.downloadState("book-1").first()
+        assertEquals(BookDownloadState.NotDownloaded, state)
+      }
+
+    @Test
+    fun `downloadState is Downloading with progress while caching is in progress`() =
+      runTest(testDispatcher) {
+        statusFlow.emit("book-1" to CacheState(CacheStatus.Caching, 0.42))
+
+        val state = viewModel.downloadState("book-1").first()
+
+        assertEquals(BookDownloadState.Downloading(0.42), state)
+      }
+
+    @Test
+    fun `downloadState is Downloaded when book id is in the cached set`() =
+      runTest(testDispatcher) {
+        every { localCacheRepository.observeCachedBookIds() } returns flowOf(listOf("book-1"))
+
+        val vm =
+          CachingModelView(
+            context,
+            localCacheRepository,
+            contentCachingProgress,
+            contentCachingManager,
+            preferences,
+            cachedCoverProvider,
+            seriesCoverProvider,
+          )
+
+        val state = vm.downloadState("book-1").first()
+
+        assertEquals(BookDownloadState.Downloaded, state)
+      }
+
+    @Test
+    fun `downloadState transitions from Downloading to Downloaded when caching completes`() =
+      runTest(testDispatcher) {
+        val cachedIds = MutableStateFlow<List<String>>(emptyList())
+        every { localCacheRepository.observeCachedBookIds() } returns cachedIds
+
+        val vm =
+          CachingModelView(
+            context,
+            localCacheRepository,
+            contentCachingProgress,
+            contentCachingManager,
+            preferences,
+            cachedCoverProvider,
+            seriesCoverProvider,
+          )
+
+        val emissions = mutableListOf<BookDownloadState>()
+        val job = launch { vm.downloadState("book-1").collect { emissions.add(it) } }
+
+        statusFlow.emit("book-1" to CacheState(CacheStatus.Caching, 0.5))
+        assertEquals(BookDownloadState.Downloading(0.5), emissions.last())
+
+        cachedIds.value = listOf("book-1")
+        assertEquals(BookDownloadState.Downloaded, emissions.last())
+
+        job.cancel()
       }
   }
 

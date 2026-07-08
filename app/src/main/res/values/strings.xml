@@ -117,6 +117,10 @@
     </plurals>
     <string name="timer_option_disable_timer">Disable Timer</string>
     <string name="timer_title">Sleep Timer</string>
+    <string name="timer_option_custom_label">Custom:</string>
+    <string name="timer_option_minutes_short">%dm</string>
+    <string name="timer_option_decrease">Decrease sleep timer</string>
+    <string name="timer_option_increase">Increase sleep timer</string>
     <string name="player_screen_timer_navigation">Timer</string>
     <string name="chapter_search_hint">Search by chapter title</string>
     <string name="widget_placeholder_text">Click to open the app</string>

@@ -37,5 +37,3 @@ google-services.json
 # Claude Code local worktrees / settings
 .claude/
 
-# Sideload APK outputs (rotated by scripts/build-fork-apk.sh)
-dist/

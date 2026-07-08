@@ -40,4 +40,13 @@ interface FolderRepository {
   )
 
   suspend fun deleteFolder(folderId: String)
+
+  /** Number of folders currently stored, regardless of how many books each holds. */
+  suspend fun folderCount(): Int
+
+  /**
+   * Wipes every folder and its membership. Used when the app is pointed at a different server
+   * (folder book ids are server-scoped and would be dead) or on explicit logout.
+   */
+  suspend fun clear()
 }

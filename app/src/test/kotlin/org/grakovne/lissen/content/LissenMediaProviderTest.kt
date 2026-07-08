@@ -5,8 +5,10 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.grakovne.lissen.channel.audiobookshelf.AudiobookshelfChannelProvider
+import org.grakovne.lissen.channel.common.ChannelAuthService
 import org.grakovne.lissen.channel.common.MediaChannel
 import org.grakovne.lissen.channel.common.OperationError
 import org.grakovne.lissen.channel.common.OperationResult
@@ -26,6 +28,7 @@ import org.grakovne.lissen.domain.PlaybackProgress
 import org.grakovne.lissen.domain.PlaybackSession
 import org.grakovne.lissen.domain.PlayingChapter
 import org.grakovne.lissen.domain.RecentBook
+import org.grakovne.lissen.domain.UserAccount
 import org.grakovne.lissen.persistence.preferences.LissenSharedPreferences
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
@@ -41,12 +44,14 @@ class LissenMediaProviderTest {
   private val cachedBookmarkProvider = mockk<CachedBookmarkProvider>(relaxed = true)
   private val folderRepository = mockk<FolderRepository>(relaxed = true)
   private val mediaChannel = mockk<MediaChannel>(relaxed = true)
+  private val authService = mockk<ChannelAuthService>(relaxed = true)
 
   private lateinit var provider: LissenMediaProvider
 
   @BeforeEach
   fun setup() {
     every { channelProvider.provideMediaChannel() } returns mediaChannel
+    every { channelProvider.provideChannelAuth() } returns authService
     provider =
       LissenMediaProvider(
         preferences,
@@ -121,6 +126,60 @@ class LissenMediaProviderTest {
 
         assertInstanceOf(OperationResult.Error::class.java, result)
       }
+  }
+
+  @Nested
+  inner class OnPostLoginFolderWipe {
+    @BeforeEach
+    fun stubLogin() {
+      every { preferences.isForceCache() } returns false
+      coEvery { mediaChannel.fetchLibraries() } returns OperationResult.Success(emptyList())
+    }
+
+    @Test
+    fun `wipes folders when logging into a different host with existing folders`() =
+      runBlocking {
+        every { preferences.getFoldersHost() } returns "https://server-a.example"
+        coEvery { folderRepository.folderCount() } returns 2
+
+        provider.onPostLogin("https://server-b.example", account())
+
+        coVerify(exactly = 1) { folderRepository.clear() }
+        verify(exactly = 1) { preferences.saveFoldersHost("https://server-b.example") }
+      }
+
+    @Test
+    fun `does not wipe folders when re-logging into the same host`() =
+      runBlocking {
+        every { preferences.getFoldersHost() } returns "https://server-a.example"
+        coEvery { folderRepository.folderCount() } returns 2
+
+        provider.onPostLogin("https://server-a.example", account())
+
+        coVerify(exactly = 0) { folderRepository.clear() }
+        verify(exactly = 0) { preferences.saveFoldersHost(any()) }
+      }
+
+    @Test
+    fun `does not wipe when host differs but no folders exist`() =
+      runBlocking {
+        every { preferences.getFoldersHost() } returns "https://server-a.example"
+        coEvery { folderRepository.folderCount() } returns 0
+
+        provider.onPostLogin("https://server-b.example", account())
+
+        coVerify(exactly = 0) { folderRepository.clear() }
+        verify(exactly = 0) { preferences.saveFoldersHost(any()) }
+      }
+
+    private fun account() =
+      UserAccount(
+        token = "token",
+        accessToken = null,
+        refreshToken = null,
+        username = "user",
+        preferredLibraryId = null,
+      )
   }
 
   @Nested

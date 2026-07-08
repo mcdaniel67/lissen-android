@@ -7,6 +7,7 @@ import org.grakovne.lissen.content.cache.persistent.entity.FolderEntity
 import org.grakovne.lissen.content.cache.persistent.entity.FolderItemEntity
 import org.grakovne.lissen.domain.Book
 import org.grakovne.lissen.domain.LibraryEntry
+import org.grakovne.lissen.persistence.preferences.LissenSharedPreferences
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -16,6 +17,7 @@ class LocalFolderRepository
   @Inject
   constructor(
     private val folderDao: FolderDao,
+    private val preferences: LissenSharedPreferences,
   ) : FolderRepository {
     override fun observeFolders(): Flow<List<LibraryEntry.FolderEntry>> =
       folderDao
@@ -46,6 +48,9 @@ class LocalFolderRepository
       val folderId = UUID.randomUUID().toString()
       val folder = FolderEntity(id = folderId, name = name.trim(), createdAt = System.currentTimeMillis())
       folderDao.replaceFolder(folder, books.toItems(folderId, startPosition = 0))
+
+      // Remember which server these folders belong to, so a later login to a different host can wipe them.
+      preferences.getHost()?.let { preferences.saveFoldersHost(it) }
     }
 
     override suspend fun renameFolder(
@@ -70,6 +75,10 @@ class LocalFolderRepository
       folderDao.deleteItems(folderId)
       folderDao.deleteFolder(folderId)
     }
+
+    override suspend fun folderCount(): Int = folderDao.folderCount()
+
+    override suspend fun clear() = folderDao.clear()
 
     private fun List<Book>.toItems(
       folderId: String,

@@ -176,6 +176,11 @@ class LissenSharedPreferences
 
     fun getHost(): String? = sharedPreferences.getString(KEY_HOST, null)
 
+    /** Host the local folders were created against, so they can be wiped when the app points at a different server. */
+    fun saveFoldersHost(host: String) = sharedPreferences.edit { putString(KEY_FOLDERS_HOST, host) }
+
+    fun getFoldersHost(): String? = sharedPreferences.getString(KEY_FOLDERS_HOST, null)
+
     fun getDeviceId(): String =
       synchronized(deviceIdLock) {
         sharedPreferences.getString(KEY_DEVICE_ID, null)
@@ -717,6 +722,7 @@ class LissenSharedPreferences
     companion object {
       private const val KEY_ALIAS = "secure_key_alias"
       private const val KEY_HOST = "host"
+      private const val KEY_FOLDERS_HOST = "folders_host"
       private const val KEY_USERNAME = "username"
       private const val KEY_ACCESS_TOKEN = "access_token"
       private const val KEY_REFRESH_TOKEN = "refresh_token"

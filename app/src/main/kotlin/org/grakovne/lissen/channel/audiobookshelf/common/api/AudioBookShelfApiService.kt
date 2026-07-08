@@ -12,6 +12,7 @@ import org.grakovne.lissen.channel.audiobookshelf.common.converter.LoginResponse
 import org.grakovne.lissen.channel.common.ApiClient
 import org.grakovne.lissen.channel.common.OperationError
 import org.grakovne.lissen.channel.common.OperationResult
+import org.grakovne.lissen.content.folder.FolderRepository
 import org.grakovne.lissen.domain.UserAccount
 import org.grakovne.lissen.persistence.preferences.LissenSharedPreferences
 import retrofit2.Response
@@ -28,6 +29,7 @@ class AudioBookShelfApiService
     private val preferences: LissenSharedPreferences,
     private val requestHeadersProvider: RequestHeadersProvider,
     private val loginResponseConverter: LoginResponseConverter,
+    private val folderRepository: FolderRepository,
   ) {
     private var cachedConfig: ClientConfig? = null
     private var clientCache: ChannelClients? = null
@@ -88,6 +90,8 @@ class AudioBookShelfApiService
             Timber.d("Refresh token update failed: code=${refreshResult.code}")
             if (refreshResult.code == OperationError.Unauthorized) {
               preferences.clearCredentials()
+              // Credentials were force-invalidated by the server; drop server-scoped folders too.
+              folderRepository.clear()
             }
           }
 

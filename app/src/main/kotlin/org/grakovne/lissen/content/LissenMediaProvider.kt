@@ -454,6 +454,8 @@ class LissenMediaProvider
           refreshToken = account.refreshToken,
         )
 
+      wipeFoldersOnServerChange(host)
+
       fetchLibraries()
         .fold(
           onSuccess = {
@@ -485,6 +487,19 @@ class LissenMediaProvider
               }?.let { preferences.savePreferredLibrary(it) }
           },
         )
+    }
+
+    /**
+     * Folders store server-scoped book ids. If we just logged into a different host than the one the
+     * existing folders were created against, those ids are dead — wipe them. Re-login to the same host
+     * leaves folders untouched. Requires [persistCredentials] to have already saved the new host.
+     */
+    private suspend fun wipeFoldersOnServerChange(host: String) {
+      if (host != preferences.getFoldersHost() && folderRepository.folderCount() > 0) {
+        Timber.i("Server changed (folders belonged to ${preferences.getFoldersHost()}, now $host); wiping local folders")
+        folderRepository.clear()
+        preferences.saveFoldersHost(host)
+      }
     }
 
     private suspend fun syncFromLocalProgress(

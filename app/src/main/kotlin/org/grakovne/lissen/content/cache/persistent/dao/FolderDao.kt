@@ -47,6 +47,15 @@ interface FolderDao {
   @Query("SELECT COALESCE(MAX(position), -1) FROM folder_items WHERE folderId = :folderId")
   suspend fun maxPosition(folderId: String): Int
 
+  @Query("SELECT COUNT(*) FROM folders")
+  suspend fun folderCount(): Int
+
+  @Query("DELETE FROM folder_items")
+  suspend fun deleteAllItems()
+
+  @Query("DELETE FROM folders")
+  suspend fun deleteAllFolders()
+
   @Transaction
   suspend fun replaceFolder(
     folder: FolderEntity,
@@ -55,5 +64,11 @@ interface FolderDao {
     upsertFolder(folder)
     deleteItems(folder.id)
     upsertItems(items)
+  }
+
+  @Transaction
+  suspend fun clear() {
+    deleteAllItems()
+    deleteAllFolders()
   }
 }

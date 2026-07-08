@@ -221,7 +221,6 @@ private fun TimerOption?.isSame(that: TimerOption?) =
 private val OptionPresets =
   listOf(
     null,
-    DurationTimerOption(10),
     DurationTimerOption(15),
     DurationTimerOption(30),
     DurationTimerOption(45),

@@ -151,7 +151,16 @@ local branches deleted afterward.
 
 ---
 
-### WP-1 — Fork identity + README
+### WP-1 — Fork identity + README ✅ DONE 2026-07-08
+
+> Landed on `main` (`d46e9fe5` build/identity, `afa3966c` README, both from the
+> planning session; verified 2026-07-08). `applicationId io.github.mcdaniel67.lissen`,
+> `namespace` unchanged, `versionName 1.11.4-fork.1` (versionCode 11104), `personal`
+> build type kept. `app_name` = "Lissen Fork". OAuth is unaffected: the redirect scheme
+> is the hardcoded `lissen://oauth` (`channel/audiobookshelf/common/oauth/OAuthScheme.kt`
+> + manifest intent filter), not derived from applicationId. `assembleRelease` +
+> `aapt2 dump badging` confirm identity. Residual: on-device install-alongside + OAuth
+> round-trip need a physical device.
 
 **Goal:** the fork ships under its own identity and its README says what it is.
 

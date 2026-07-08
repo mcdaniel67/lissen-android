@@ -558,6 +558,60 @@ class CachedBookRepositoryTest {
       assertFalse(progressSlot.captured.isFinished)
     }
 
+  @Test
+  fun `updateFinishedState preserves currentTime from existing progress`() =
+    runBlocking {
+      val existing =
+        org.grakovne.lissen.content.cache.persistent.entity.MediaProgressEntity(
+          bookId = "b1",
+          currentTime = 42.0,
+          isFinished = false,
+          lastUpdate = 1L,
+        )
+      val progressSlot = io.mockk.slot<org.grakovne.lissen.content.cache.persistent.entity.MediaProgressEntity>()
+      coEvery { bookDao.fetchMediaProgress("b1") } returns existing
+      coEvery { bookDao.upsertMediaProgress(capture(progressSlot)) } returns Unit
+
+      repository.updateFinishedState("b1", true)
+
+      assertEquals("b1", progressSlot.captured.bookId)
+      assertEquals(42.0, progressSlot.captured.currentTime)
+      assertTrue(progressSlot.captured.isFinished)
+    }
+
+  @Test
+  fun `updateFinishedState defaults currentTime to zero when there is no existing progress`() =
+    runBlocking {
+      val progressSlot = io.mockk.slot<org.grakovne.lissen.content.cache.persistent.entity.MediaProgressEntity>()
+      coEvery { bookDao.fetchMediaProgress("b1") } returns null
+      coEvery { bookDao.upsertMediaProgress(capture(progressSlot)) } returns Unit
+
+      repository.updateFinishedState("b1", true)
+
+      assertEquals("b1", progressSlot.captured.bookId)
+      assertEquals(0.0, progressSlot.captured.currentTime)
+      assertTrue(progressSlot.captured.isFinished)
+    }
+
+  @Test
+  fun `updateFinishedState can mark an item unfinished`() =
+    runBlocking {
+      val existing =
+        org.grakovne.lissen.content.cache.persistent.entity.MediaProgressEntity(
+          bookId = "b1",
+          currentTime = 42.0,
+          isFinished = true,
+          lastUpdate = 1L,
+        )
+      val progressSlot = io.mockk.slot<org.grakovne.lissen.content.cache.persistent.entity.MediaProgressEntity>()
+      coEvery { bookDao.fetchMediaProgress("b1") } returns existing
+      coEvery { bookDao.upsertMediaProgress(capture(progressSlot)) } returns Unit
+
+      repository.updateFinishedState("b1", false)
+
+      assertFalse(progressSlot.captured.isFinished)
+    }
+
   companion object {
     private const val LIBRARY_ID = "lib-1"
   }

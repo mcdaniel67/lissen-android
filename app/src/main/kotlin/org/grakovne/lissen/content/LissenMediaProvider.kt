@@ -117,6 +117,20 @@ class LissenMediaProvider
       }
     }
 
+    suspend fun markAsListened(
+      itemId: String,
+      isFinished: Boolean,
+    ): OperationResult<Unit> {
+      Timber.d("Marking as listened: bookId=$itemId, isFinished=$isFinished")
+
+      localCacheRepository.updateFinishedState(itemId, isFinished)
+
+      return when (preferences.isForceCache()) {
+        true -> OperationResult.Success(Unit)
+        false -> providePreferredChannel().updateListenedState(itemId, isFinished)
+      }
+    }
+
     suspend fun fetchBookCover(bookId: String): OperationResult<File> {
       Timber.d("Fetching book cover: bookId=$bookId")
       return when (preferences.isForceCache()) {

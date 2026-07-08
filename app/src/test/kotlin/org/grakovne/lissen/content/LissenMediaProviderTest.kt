@@ -403,6 +403,72 @@ class LissenMediaProviderTest {
   }
 
   @Nested
+  inner class MarkAsListened {
+    @Test
+    fun `always updates local cache regardless of force cache flag`() =
+      runBlocking {
+        every { preferences.isForceCache() } returns true
+
+        provider.markAsListened("book-1", true)
+
+        coVerify { localCacheRepository.updateFinishedState("book-1", true) }
+      }
+
+    @Test
+    fun `returns Success without calling channel when force cache enabled`() =
+      runBlocking {
+        every { preferences.isForceCache() } returns true
+
+        val result = provider.markAsListened("book-1", true)
+
+        assertInstanceOf(OperationResult.Success::class.java, result)
+        coVerify(exactly = 0) { mediaChannel.updateListenedState(any(), any()) }
+      }
+
+    @Test
+    fun `calls channel and returns its result when force cache disabled`() =
+      runBlocking {
+        every { preferences.isForceCache() } returns false
+        coEvery {
+          mediaChannel.updateListenedState("book-1", true)
+        } returns OperationResult.Success(Unit)
+
+        val result = provider.markAsListened("book-1", true)
+
+        assertInstanceOf(OperationResult.Success::class.java, result)
+        coVerify { mediaChannel.updateListenedState("book-1", true) }
+      }
+
+    @Test
+    fun `returns Error from markAsListened when channel call fails and force cache disabled`() =
+      runBlocking {
+        every { preferences.isForceCache() } returns false
+        coEvery {
+          mediaChannel.updateListenedState(any(), any())
+        } returns OperationResult.Error(OperationError.NetworkError)
+
+        val result = provider.markAsListened("book-1", false)
+
+        assertInstanceOf(OperationResult.Error::class.java, result)
+        assertEquals(OperationError.NetworkError, (result as OperationResult.Error).code)
+      }
+
+    @Test
+    fun `passes isFinished through to local cache and channel unchanged`() =
+      runBlocking {
+        every { preferences.isForceCache() } returns false
+        coEvery {
+          mediaChannel.updateListenedState("book-1", false)
+        } returns OperationResult.Success(Unit)
+
+        provider.markAsListened("book-1", false)
+
+        coVerify { localCacheRepository.updateFinishedState("book-1", false) }
+        coVerify { mediaChannel.updateListenedState("book-1", false) }
+      }
+  }
+
+  @Nested
   inner class ProvideFileUri {
     @Test
     fun `returns cached URI when local cache has it`() {

@@ -33,6 +33,11 @@ interface MediaChannel {
     progress: PlaybackProgress,
   ): OperationResult<Unit>
 
+  suspend fun updateListenedState(
+    itemId: String,
+    isFinished: Boolean,
+  ): OperationResult<Unit>
+
   suspend fun fetchBookCover(
     bookId: String,
     width: Int? = null,

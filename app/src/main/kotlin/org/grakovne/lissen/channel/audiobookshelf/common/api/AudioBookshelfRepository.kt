@@ -15,6 +15,7 @@ import org.grakovne.lissen.channel.audiobookshelf.common.model.metadata.LibraryR
 import org.grakovne.lissen.channel.audiobookshelf.common.model.playback.PlaybackSessionResponse
 import org.grakovne.lissen.channel.audiobookshelf.common.model.playback.PlaybackStartRequest
 import org.grakovne.lissen.channel.audiobookshelf.common.model.playback.ProgressSyncRequest
+import org.grakovne.lissen.channel.audiobookshelf.common.model.user.ChangeListenedStateRequest
 import org.grakovne.lissen.channel.audiobookshelf.common.model.user.PersonalizedFeedResponse
 import org.grakovne.lissen.channel.audiobookshelf.common.model.user.UserResponse
 import org.grakovne.lissen.channel.audiobookshelf.library.model.BookResponse
@@ -191,6 +192,17 @@ class AudioBookshelfRepository
       audioBookShelfApiService.makeRequest {
         it.fetchLibraryItemProgress(
           itemId = itemId,
+        )
+      }
+
+    suspend fun updateListenedState(
+      itemId: String,
+      isFinished: Boolean,
+    ): OperationResult<Unit> =
+      audioBookShelfApiService.makeRequest {
+        it.updateListenedState(
+          itemId = itemId,
+          request = ChangeListenedStateRequest(isFinished = isFinished),
         )
       }
 

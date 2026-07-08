@@ -51,6 +51,14 @@ class LocalCacheRepository
       return OperationResult.Success(Unit)
     }
 
+    suspend fun updateFinishedState(
+      bookId: String,
+      isFinished: Boolean,
+    ): OperationResult<Unit> {
+      cachedBookRepository.updateFinishedState(bookId, isFinished)
+      return OperationResult.Success(Unit)
+    }
+
     fun fetchBookCover(bookId: String): OperationResult<File> {
       val coverFile = cachedBookRepository.provideBookCover(bookId)
 

@@ -64,6 +64,11 @@ abstract class AudiobookshelfChannel(
     progress: PlaybackProgress,
   ): OperationResult<Unit> = syncService.syncProgress(sessionId, progress)
 
+  override suspend fun updateListenedState(
+    itemId: String,
+    isFinished: Boolean,
+  ): OperationResult<Unit> = dataRepository.updateListenedState(itemId, isFinished)
+
   override suspend fun fetchBookCover(
     bookId: String,
     width: Int?,

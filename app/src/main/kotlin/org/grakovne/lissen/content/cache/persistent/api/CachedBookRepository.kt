@@ -326,6 +326,23 @@ class CachedBookRepository
       bookDao.upsertMediaProgress(entity)
     }
 
+    suspend fun updateFinishedState(
+      bookId: String,
+      isFinished: Boolean,
+    ) {
+      val existing = bookDao.fetchMediaProgress(bookId)
+
+      val entity =
+        MediaProgressEntity(
+          bookId = bookId,
+          currentTime = existing?.currentTime ?: 0.0,
+          isFinished = isFinished,
+          lastUpdate = Instant.now().toEpochMilli(),
+        )
+
+      bookDao.upsertMediaProgress(entity)
+    }
+
     private fun buildOrdering(): Pair<String, String> {
       val option =
         when (preferences.getLibraryOrdering().option) {

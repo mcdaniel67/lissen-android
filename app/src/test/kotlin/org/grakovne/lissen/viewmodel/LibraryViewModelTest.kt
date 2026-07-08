@@ -6,8 +6,10 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.grakovne.lissen.channel.common.OperationError
 import org.grakovne.lissen.channel.common.OperationResult
@@ -330,6 +332,70 @@ class LibraryViewModelTest {
       viewModel.updateSearch("dune")
 
       assertEquals("dune", viewModel.searchToken.value)
+    }
+  }
+
+  @Nested
+  inner class Selection {
+    private fun book(id: String) = Book(id = id, subtitle = null, series = null, title = "Title $id", author = "Author")
+
+    @Test
+    fun `markSelectionFinished marks every selected book finished and then clears the selection`() {
+      coEvery { mediaChannel.markAsListened(any(), true) } returns OperationResult.Success(Unit)
+
+      viewModel.toggleSelection(book("b1"))
+      viewModel.toggleSelection(book("b2"))
+
+      viewModel.markSelectionFinished()
+      viewModel.markSelectionFinished()
+
+      coVerify(exactly = 1) { mediaChannel.markAsListened("b1", true) }
+      coVerify(exactly = 1) { mediaChannel.markAsListened("b2", true) }
+    }
+
+    @Test
+    fun `markSelectionFinished emits the count of books that failed`() =
+      runTest {
+        coEvery { mediaChannel.markAsListened("b1", true) } returns OperationResult.Success(Unit)
+        coEvery { mediaChannel.markAsListened("b2", true) } returns OperationResult.Error(OperationError.NetworkError)
+
+        val received = mutableListOf<Int>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+          viewModel.markFinishedFailures.collect { received.add(it) }
+        }
+
+        viewModel.toggleSelection(book("b1"))
+        viewModel.toggleSelection(book("b2"))
+        viewModel.markSelectionFinished()
+
+        assertEquals(listOf(1), received)
+      }
+
+    @Test
+    fun `markSelectionFinished is a no-op with an empty selection`() {
+      viewModel.markSelectionFinished()
+
+      coVerify(exactly = 0) { mediaChannel.markAsListened(any(), any()) }
+    }
+
+    @Test
+    fun `addSelectionToFolder adds every selected book and then clears the selection`() {
+      val b1 = book("b1")
+      val b2 = book("b2")
+      viewModel.toggleSelection(b1)
+      viewModel.toggleSelection(b2)
+
+      viewModel.addSelectionToFolder("folder-1")
+      viewModel.addSelectionToFolder("folder-1")
+
+      coVerify(exactly = 1) { folderRepository.addBooks("folder-1", listOf(b1, b2)) }
+    }
+
+    @Test
+    fun `addSelectionToFolder is a no-op with an empty selection`() {
+      viewModel.addSelectionToFolder("folder-1")
+
+      coVerify(exactly = 0) { folderRepository.addBooks(any(), any()) }
     }
   }
 

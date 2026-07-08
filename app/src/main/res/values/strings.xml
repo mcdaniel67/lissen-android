@@ -64,6 +64,13 @@
     <string name="library_selection_count">%1$d selected</string>
     <string name="library_selection_clear">Clear selection</string>
     <string name="library_selection_create_folder">Create folder</string>
+    <string name="library_selection_download">Download</string>
+    <string name="library_selection_mark_finished">Mark finished</string>
+    <string name="library_selection_add_to_folder">Add to folder</string>
+    <string name="library_selection_mark_finished_error">Couldn\'t mark %1$d item(s) as finished</string>
+    <string name="library_folder_add_title">Add to folder</string>
+    <string name="library_folder_add_new">New folder…</string>
+    <string name="library_folder_add_empty">No folders yet</string>
     <string name="library_folder_create_title">New folder</string>
     <string name="library_folder_create_message">Create a folder from %1$d selected item(s).</string>
     <string name="library_folder_create_hint">Folder name</string>

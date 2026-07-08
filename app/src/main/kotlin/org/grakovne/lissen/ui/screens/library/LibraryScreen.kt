@@ -1,6 +1,7 @@
 package org.grakovne.lissen.ui.screens.library
 
 import android.view.View
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedContent
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -31,10 +33,15 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.CreateNewFolder
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -153,6 +160,7 @@ fun LibraryScreen(
   val resolveDownloadState = { bookId: String -> cachingModelView.downloadStateOf(bookId, downloadedIds, runningDownloads) }
   val folders by libraryViewModel.folders.collectAsState()
   var showCreateFolder by remember { mutableStateOf(false) }
+  var showAddToFolder by remember { mutableStateOf(false) }
   var folderPendingDelete by remember { mutableStateOf<LibraryEntry.FolderEntry?>(null) }
   val expandedGroups by libraryViewModel.expandedGroups.collectAsState()
   val groupBooks by libraryViewModel.groupBooks.collectAsState()
@@ -241,6 +249,17 @@ fun LibraryScreen(
   val playingBook by playerViewModel.book.collectAsState()
   val context = LocalContext.current
 
+  LaunchedEffect(Unit) {
+    libraryViewModel.markFinishedFailures.collect { failures ->
+      Toast
+        .makeText(
+          context,
+          context.getString(R.string.library_selection_mark_finished_error, failures),
+          Toast.LENGTH_LONG,
+        ).show()
+    }
+  }
+
   fun isRecentVisible(): Boolean {
     val fetchAvailable = networkService.isNetworkAvailable() || cachingModelView.localCacheUsing()
     val hasContent = recentBooks.isEmpty().not()
@@ -313,6 +332,12 @@ fun LibraryScreen(
         SelectionTopBar(
           count = selectedBookIds.size,
           onClose = { libraryViewModel.clearSelection() },
+          onDownload = {
+            cachingModelView.cacheByIds(selectedBookIds)
+            libraryViewModel.clearSelection()
+          },
+          onMarkFinished = { libraryViewModel.markSelectionFinished() },
+          onAddToFolder = { showAddToFolder = true },
           onCreateFolder = { showCreateFolder = true },
         )
       } else {
@@ -686,6 +711,21 @@ fun LibraryScreen(
     )
   }
 
+  if (showAddToFolder) {
+    AddToFolderDialog(
+      folders = folders,
+      onDismiss = { showAddToFolder = false },
+      onFolderSelected = { folderId ->
+        libraryViewModel.addSelectionToFolder(folderId)
+        showAddToFolder = false
+      },
+      onCreateNew = {
+        showAddToFolder = false
+        showCreateFolder = true
+      },
+    )
+  }
+
   folderPendingDelete?.let { folder ->
     AlertDialog(
       onDismissRequest = { folderPendingDelete = null },
@@ -713,6 +753,9 @@ fun LibraryScreen(
 private fun SelectionTopBar(
   count: Int,
   onClose: () -> Unit,
+  onDownload: () -> Unit,
+  onMarkFinished: () -> Unit,
+  onAddToFolder: () -> Unit,
   onCreateFolder: () -> Unit,
 ) {
   TopAppBar(
@@ -733,8 +776,39 @@ private fun SelectionTopBar(
     },
     actions = {
       IconButton(
+        onClick = onDownload,
+        enabled = count > 0,
+        modifier = Modifier.testTag("selectionDownload"),
+      ) {
+        Icon(
+          imageVector = Icons.Outlined.Download,
+          contentDescription = stringResource(R.string.library_selection_download),
+        )
+      }
+      IconButton(
+        onClick = onMarkFinished,
+        enabled = count > 0,
+        modifier = Modifier.testTag("selectionMarkFinished"),
+      ) {
+        Icon(
+          imageVector = Icons.Outlined.CheckCircle,
+          contentDescription = stringResource(R.string.library_selection_mark_finished),
+        )
+      }
+      IconButton(
+        onClick = onAddToFolder,
+        enabled = count > 0,
+        modifier = Modifier.testTag("selectionAddToFolder"),
+      ) {
+        Icon(
+          imageVector = Icons.Outlined.Folder,
+          contentDescription = stringResource(R.string.library_selection_add_to_folder),
+        )
+      }
+      IconButton(
         onClick = onCreateFolder,
         enabled = count > 0,
+        modifier = Modifier.testTag("selectionCreateFolder"),
       ) {
         Icon(
           imageVector = Icons.Outlined.CreateNewFolder,
@@ -781,6 +855,86 @@ private fun CreateFolderDialog(
         Text(stringResource(R.string.library_folder_create_confirm))
       }
     },
+    dismissButton = {
+      TextButton(onClick = onDismiss) {
+        Text(stringResource(R.string.library_folder_dialog_cancel))
+      }
+    },
+  )
+}
+
+@Composable
+private fun AddToFolderDialog(
+  folders: List<LibraryEntry.FolderEntry>,
+  onDismiss: () -> Unit,
+  onFolderSelected: (String) -> Unit,
+  onCreateNew: () -> Unit,
+) {
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = { Text(stringResource(R.string.library_folder_add_title)) },
+    text = {
+      Column(
+        modifier =
+          Modifier
+            .fillMaxWidth()
+            .heightIn(max = 360.dp)
+            .verticalScroll(rememberScrollState()),
+      ) {
+        Row(
+          modifier =
+            Modifier
+              .fillMaxWidth()
+              .clickable { onCreateNew() }
+              .padding(vertical = 12.dp)
+              .testTag("addToFolderNew"),
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Icon(
+            imageVector = Icons.Outlined.CreateNewFolder,
+            contentDescription = null,
+            modifier = Modifier.padding(end = 16.dp),
+          )
+          Text(
+            text = stringResource(R.string.library_folder_add_new),
+            style = MaterialTheme.typography.bodyLarge,
+          )
+        }
+
+        if (folders.isEmpty()) {
+          Text(
+            text = stringResource(R.string.library_folder_add_empty),
+            style = MaterialTheme.typography.bodyMedium,
+            color = colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(vertical = 12.dp),
+          )
+        } else {
+          folders.forEach { folder ->
+            Row(
+              modifier =
+                Modifier
+                  .fillMaxWidth()
+                  .clickable { onFolderSelected(folder.id) }
+                  .padding(vertical = 8.dp),
+              verticalAlignment = Alignment.CenterVertically,
+            ) {
+              Icon(
+                imageVector = Icons.Outlined.Folder,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 16.dp),
+              )
+              Text(
+                text = folder.name,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                modifier = Modifier.weight(1f),
+              )
+            }
+          }
+        }
+      }
+    },
+    confirmButton = {},
     dismissButton = {
       TextButton(onClick = onDismiss) {
         Text(stringResource(R.string.library_folder_dialog_cancel))

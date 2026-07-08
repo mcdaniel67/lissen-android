@@ -30,6 +30,7 @@ import org.grakovne.lissen.content.cache.persistent.ContentCachingService
 import org.grakovne.lissen.content.cache.persistent.LocalCacheRepository
 import org.grakovne.lissen.content.cache.temporary.CachedCoverProvider
 import org.grakovne.lissen.content.cache.temporary.SeriesCoverProvider
+import org.grakovne.lissen.domain.AllItemsDownloadOption
 import org.grakovne.lissen.domain.BookDownloadState
 import org.grakovne.lissen.domain.CacheStatus
 import org.grakovne.lissen.domain.ContentCachingTask
@@ -132,9 +133,28 @@ class CachingModelView
       option: DownloadOption,
     ) {
       Timber.d("User action: cache ${mediaItem.id}, option=$option, position=${currentPosition.toInt()}s")
+      startCaching(mediaItem.id, currentPosition, option)
+    }
+
+    /**
+     * Fire-and-forget bulk download for a multi-selection: enqueues a full-book caching task per id.
+     * The caching service fetches each book and registers an independent job, so per-book progress
+     * surfaces through the same [runningDownloads] / [downloadState] flows as a single download and
+     * callers don't wait on this.
+     */
+    fun cacheByIds(bookIds: Collection<String>) {
+      Timber.d("User action: cacheByIds ${bookIds.size} items")
+      bookIds.forEach { startCaching(it, 0.0, AllItemsDownloadOption) }
+    }
+
+    private fun startCaching(
+      itemId: String,
+      currentPosition: Double,
+      option: DownloadOption,
+    ) {
       val task =
         ContentCachingTask(
-          itemId = mediaItem.id,
+          itemId = itemId,
           options = option,
           currentPosition = currentPosition,
         )

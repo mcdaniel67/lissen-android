@@ -13,7 +13,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,6 +28,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import org.grakovne.lissen.channel.common.OperationResult
 import org.grakovne.lissen.common.sortedBySeriesPosition
 import org.grakovne.lissen.common.sortedBySeriesThenPosition
 import org.grakovne.lissen.content.LissenMediaProvider
@@ -155,6 +158,44 @@ class LibraryViewModel
 
     fun clearSelection() {
       _selectedBooks.value = emptyMap()
+    }
+
+    /**
+     * One-shot count of books that failed to mark finished, surfaced as a single snackbar/toast so
+     * a partial failure doesn't abort the rest of the batch.
+     */
+    private val _markFinishedFailures = MutableSharedFlow<Int>(extraBufferCapacity = 1)
+    val markFinishedFailures: SharedFlow<Int> = _markFinishedFailures
+
+    fun markSelectionFinished() {
+      val ids = _selectedBooks.value.keys.toList()
+      if (ids.isEmpty()) {
+        return
+      }
+
+      Timber.d("User action: markSelectionFinished ${ids.size} items")
+      viewModelScope.launch {
+        val failures = ids.count { mediaChannel.markAsListened(it, true) is OperationResult.Error }
+        clearSelection()
+        refreshLibrary()
+        if (failures > 0) {
+          _markFinishedFailures.emit(failures)
+        }
+      }
+    }
+
+    fun addSelectionToFolder(folderId: String) {
+      val books = _selectedBooks.value.values.toList()
+      if (books.isEmpty()) {
+        return
+      }
+
+      Timber.d("User action: addSelectionToFolder $folderId (${books.size} items)")
+      viewModelScope.launch {
+        folderRepository.addBooks(folderId, books)
+        clearSelection()
+        refreshLibrary()
+      }
     }
 
     fun createFolder(name: String) {

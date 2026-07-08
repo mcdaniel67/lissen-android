@@ -216,7 +216,7 @@ class LissenSharedPreferencesConfigBackupTest {
       assertEquals(LibraryGrouping.NONE.name, backup.libraryGrouping)
       assertEquals(NetworkTypeAutoCache.WIFI_ONLY.name, backup.autoDownloadNetworkType)
       assertEquals("disabled", backup.autoDownloadOptionId)
-      assertEquals(listOf(LibraryType.LIBRARY.name, LibraryType.PODCAST.name), backup.autoDownloadLibraryTypes)
+      assertEquals(listOf(LibraryType.LIBRARY.name), backup.autoDownloadLibraryTypes)
       assertEquals(SeekTime.Default, backup.seekTime)
       assertEquals(LibraryOrderingConfiguration.default, backup.libraryOrdering)
       assertEquals(DEFAULT_USER_AGENT, backup.userAgent)

@@ -80,8 +80,7 @@ fun DownloadsComposable(
           text =
             when (libraryType) {
               LibraryType.LIBRARY -> stringResource(R.string.downloads_menu_download_book)
-              LibraryType.PODCAST -> stringResource(R.string.downloads_menu_download_podcast)
-              LibraryType.UNKNOWN -> stringResource(R.string.downloads_menu_download_unknown)
+              else -> stringResource(R.string.downloads_menu_download_unknown)
             },
           style = typography.bodyLarge,
         )
@@ -108,8 +107,7 @@ fun DownloadsComposable(
                   text =
                     when (libraryType) {
                       LibraryType.LIBRARY -> stringResource(R.string.downloads_menu_download_option_next_chapters_label)
-                      LibraryType.PODCAST -> stringResource(R.string.downloads_menu_download_option_next_episodes_label)
-                      LibraryType.UNKNOWN -> stringResource(R.string.downloads_menu_download_option_next_items_label)
+                      else -> stringResource(R.string.downloads_menu_download_option_next_items_label)
                     },
                   style = typography.bodyMedium,
                   color = optionColor,
@@ -184,8 +182,7 @@ fun DownloadsComposable(
                 text =
                   when (libraryType) {
                     LibraryType.LIBRARY -> stringResource(R.string.downloads_menu_download_option_clear_chapters)
-                    LibraryType.PODCAST -> stringResource(R.string.downloads_menu_download_option_clear_episodes)
-                    LibraryType.UNKNOWN -> stringResource(R.string.downloads_menu_download_option_clear_items)
+                    else -> stringResource(R.string.downloads_menu_download_option_clear_items)
                   },
                 color = colorScheme.error,
                 enabled = true,

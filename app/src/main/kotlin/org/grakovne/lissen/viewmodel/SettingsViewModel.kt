@@ -214,7 +214,8 @@ class SettingsViewModel
       viewModelScope.launch {
         when (val response = mediaChannel.fetchLibraries()) {
           is OperationResult.Success -> {
-            val libraries = response.data
+            // Audiobooks-only fork: podcast (and other non-book) libraries are never offered.
+            val libraries = response.data.filter { it.type in LibraryType.meaningfulTypes }
             _libraries.value = libraries
 
             val preferredLibrary = preferences.getPreferredLibrary()

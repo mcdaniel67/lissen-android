@@ -165,15 +165,7 @@ fun provideChapterNumberTitle(
       )
     }
 
-    LibraryType.PODCAST -> {
-      context.getString(
-        R.string.player_screen_now_playing_title_podcast_of,
-        currentTrackIndex + 1,
-        book?.chapters?.size ?: "?",
-      )
-    }
-
-    LibraryType.UNKNOWN -> {
+    else -> {
       context.getString(
         R.string.player_screen_now_playing_title_item_of,
         currentTrackIndex + 1,

@@ -10,6 +10,8 @@ enum class LibraryType {
   ;
 
   companion object {
-    val meaningfulTypes = listOf(LIBRARY, PODCAST)
+    // Audiobooks-only fork: podcast libraries are never offered for selection.
+    // PODCAST/UNKNOWN remain valid enum values (the server still reports them).
+    val meaningfulTypes = listOf(LIBRARY)
   }
 }

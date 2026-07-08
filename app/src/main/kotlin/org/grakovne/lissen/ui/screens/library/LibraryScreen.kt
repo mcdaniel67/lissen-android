@@ -281,13 +281,7 @@ fun LibraryScreen(
           ?: context.getString(R.string.library_screen_library_title)
       }
 
-      LibraryType.PODCAST -> {
-        libraryViewModel
-          .fetchPreferredLibraryTitle()
-          ?: context.getString(R.string.library_screen_podcast_title)
-      }
-
-      LibraryType.UNKNOWN -> {
+      else -> {
         ""
       }
     }

@@ -438,22 +438,23 @@ class SettingsViewModelTest {
   @Nested
   inner class FetchLibraries {
     @Test
-    fun `fetchLibraries populates libraries on success`() {
+    fun `fetchLibraries populates libraries on success and filters out non-book libraries`() {
+      val books = Library(id = "l1", title = "Books", type = LibraryType.LIBRARY)
       val libs =
         listOf(
-          Library(id = "l1", title = "Books", type = LibraryType.LIBRARY),
+          books,
           Library(id = "l2", title = "Podcasts", type = LibraryType.PODCAST),
         )
       io.mockk.coEvery { mediaChannel.fetchLibraries() } returns OperationResult.Success(libs)
 
       viewModel.fetchLibraries()
 
-      assertEquals(libs, viewModel.libraries.value)
+      assertEquals(listOf(books), viewModel.libraries.value)
     }
 
     @Test
     fun `fetchLibraries selects matching preferred library`() {
-      val preferred = Library(id = "l2", title = "Podcasts", type = LibraryType.PODCAST)
+      val preferred = Library(id = "l2", title = "More Books", type = LibraryType.LIBRARY)
       every { preferences.getPreferredLibrary() } returns preferred
       val libs =
         listOf(

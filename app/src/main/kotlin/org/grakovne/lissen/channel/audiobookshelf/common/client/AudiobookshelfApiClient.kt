@@ -21,9 +21,6 @@ import org.grakovne.lissen.channel.audiobookshelf.library.model.LibraryItemsBatc
 import org.grakovne.lissen.channel.audiobookshelf.library.model.LibraryItemsBatchResponse
 import org.grakovne.lissen.channel.audiobookshelf.library.model.LibraryItemsResponse
 import org.grakovne.lissen.channel.audiobookshelf.library.model.LibrarySearchResponse
-import org.grakovne.lissen.channel.audiobookshelf.podcast.model.PodcastItemsResponse
-import org.grakovne.lissen.channel.audiobookshelf.podcast.model.PodcastResponse
-import org.grakovne.lissen.channel.audiobookshelf.podcast.model.PodcastSearchResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -82,16 +79,6 @@ interface AudiobookshelfApiClient {
     @Query("collapseseries") collapseSeries: String = "0",
   ): Response<LibraryItemsResponse>
 
-  @GET("api/libraries/{libraryId}/items")
-  suspend fun fetchPodcastItems(
-    @Path("libraryId") libraryId: String,
-    @Query("limit") pageSize: Int,
-    @Query("page") pageNumber: Int,
-    @Query("sort") sort: String,
-    @Query("desc") desc: String,
-    @Query("minified") minified: String = "1",
-  ): Response<PodcastItemsResponse>
-
   @GET("api/libraries/{libraryId}/authors")
   suspend fun fetchLibraryAuthors(
     @Path("libraryId") libraryId: String,
@@ -108,22 +95,10 @@ interface AudiobookshelfApiClient {
     @Query("limit") limit: Int,
   ): Response<LibrarySearchResponse>
 
-  @GET("api/libraries/{libraryId}/search")
-  suspend fun searchPodcasts(
-    @Path("libraryId") libraryId: String,
-    @Query("q") request: String,
-    @Query("limit") limit: Int,
-  ): Response<PodcastSearchResponse>
-
   @GET("api/items/{itemId}")
   suspend fun fetchLibraryItem(
     @Path("itemId") itemId: String,
   ): Response<BookResponse>
-
-  @GET("api/items/{itemId}")
-  suspend fun fetchPodcastEpisode(
-    @Path("itemId") itemId: String,
-  ): Response<PodcastResponse>
 
   @GET("api/authors/{authorId}?include=items")
   suspend fun fetchAuthorLibraryItems(
@@ -140,13 +115,6 @@ interface AudiobookshelfApiClient {
     @Path("itemId") itemId: String,
     @Body syncProgressRequest: ProgressSyncRequest,
   ): Response<Unit>
-
-  @POST("api/items/{itemId}/play/{episodeId}")
-  suspend fun startPodcastPlayback(
-    @Path("itemId") itemId: String,
-    @Path("episodeId") episodeId: String,
-    @Body syncProgressRequest: PlaybackStartRequest,
-  ): Response<PlaybackSessionResponse>
 
   @POST("api/items/{itemId}/play")
   suspend fun startLibraryPlayback(

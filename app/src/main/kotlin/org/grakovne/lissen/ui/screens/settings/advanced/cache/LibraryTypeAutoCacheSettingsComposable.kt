@@ -95,8 +95,7 @@ private fun LibraryType.toItem(context: Context): CommonSettingsItem {
   val name =
     when (this) {
       LibraryType.LIBRARY -> context.getString(R.string.library_type_library)
-      LibraryType.PODCAST -> context.getString(R.string.library_type_podcast)
-      LibraryType.UNKNOWN -> context.getString(R.string.library_type_unknown)
+      else -> context.getString(R.string.library_type_unknown)
     }
 
   return CommonSettingsItem(id, name, null)

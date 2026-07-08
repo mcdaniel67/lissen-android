@@ -23,9 +23,6 @@ import org.grakovne.lissen.channel.audiobookshelf.library.model.LibraryItemsBatc
 import org.grakovne.lissen.channel.audiobookshelf.library.model.LibraryItemsBatchResponse
 import org.grakovne.lissen.channel.audiobookshelf.library.model.LibraryItemsResponse
 import org.grakovne.lissen.channel.audiobookshelf.library.model.LibrarySearchResponse
-import org.grakovne.lissen.channel.audiobookshelf.podcast.model.PodcastItemsResponse
-import org.grakovne.lissen.channel.audiobookshelf.podcast.model.PodcastResponse
-import org.grakovne.lissen.channel.audiobookshelf.podcast.model.PodcastSearchResponse
 import org.grakovne.lissen.channel.common.OperationResult
 import org.grakovne.lissen.domain.Bookmark
 import org.grakovne.lissen.domain.CreateBookmarkRequest
@@ -57,20 +54,6 @@ class AudioBookshelfRepository
         .makeRequest {
           it.fetchLibraryItemsBatch(
             LibraryItemsBatchRequest(libraryItemIds = itemIds),
-          )
-        }
-
-    suspend fun searchPodcasts(
-      libraryId: String,
-      query: String,
-      limit: Int,
-    ): OperationResult<PodcastSearchResponse> =
-      audioBookShelfApiService
-        .makeRequest {
-          it.searchPodcasts(
-            libraryId = libraryId,
-            request = query,
-            limit = limit,
           )
         }
 
@@ -157,34 +140,9 @@ class AudioBookshelfRepository
 
     private fun String.encodeSeriesFilter(): String = Base64.encodeToString(toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
 
-    suspend fun fetchPodcastItems(
-      libraryId: String,
-      pageSize: Int,
-      pageNumber: Int,
-      sort: String,
-      direction: String,
-    ): OperationResult<PodcastItemsResponse> =
-      audioBookShelfApiService
-        .makeRequest {
-          it.fetchPodcastItems(
-            libraryId = libraryId,
-            pageSize = pageSize,
-            pageNumber = pageNumber,
-            sort = sort,
-            desc = direction,
-          )
-        }
-
     suspend fun fetchBook(itemId: String): OperationResult<BookResponse> =
       audioBookShelfApiService.makeRequest {
         it.fetchLibraryItem(
-          itemId = itemId,
-        )
-      }
-
-    suspend fun fetchPodcastItem(itemId: String): OperationResult<PodcastResponse> =
-      audioBookShelfApiService.makeRequest {
-        it.fetchPodcastEpisode(
           itemId = itemId,
         )
       }
@@ -248,19 +206,6 @@ class AudioBookshelfRepository
       audioBookShelfApiService.makeRequest {
         it.startLibraryPlayback(
           itemId = itemId,
-          syncProgressRequest = request,
-        )
-      }
-
-    suspend fun startPodcastPlayback(
-      itemId: String,
-      episodeId: String,
-      request: PlaybackStartRequest,
-    ): OperationResult<PlaybackSessionResponse> =
-      audioBookShelfApiService.makeRequest {
-        it.startPodcastPlayback(
-          itemId = itemId,
-          episodeId = episodeId,
           syncProgressRequest = request,
         )
       }

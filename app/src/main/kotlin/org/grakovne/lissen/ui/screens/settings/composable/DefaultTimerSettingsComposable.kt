@@ -42,10 +42,7 @@ fun DefaultTimerSettingsComposable(viewModel: SettingsViewModel) {
       }
 
       CurrentEpisodeTimerOption -> {
-        when (libraryType) {
-          LibraryType.PODCAST -> stringResource(R.string.timer_option_after_current_episode)
-          else -> stringResource(R.string.timer_option_after_current_chapter)
-        }
+        stringResource(R.string.timer_option_after_current_chapter)
       }
 
       is DurationTimerOption -> {

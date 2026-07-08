@@ -50,8 +50,7 @@ fun NavigationBarPlaceholderComposable(
             contentDescription =
               when (libraryType) {
                 LibraryType.LIBRARY -> stringResource(R.string.player_screen_chapter_list_navigation_library)
-                LibraryType.PODCAST -> stringResource(R.string.player_screen_chapter_list_navigation_podcast)
-                LibraryType.UNKNOWN -> stringResource(R.string.player_screen_chapter_list_navigation_items)
+                else -> stringResource(R.string.player_screen_chapter_list_navigation_items)
               },
             modifier = Modifier.size(iconSize),
           )
@@ -61,8 +60,7 @@ fun NavigationBarPlaceholderComposable(
             text =
               when (libraryType) {
                 LibraryType.LIBRARY -> stringResource(R.string.player_screen_chapter_list_navigation_library)
-                LibraryType.PODCAST -> stringResource(R.string.player_screen_chapter_list_navigation_podcast)
-                LibraryType.UNKNOWN -> stringResource(R.string.player_screen_chapter_list_navigation_items)
+                else -> stringResource(R.string.player_screen_chapter_list_navigation_items)
               },
             style = labelStyle,
             maxLines = 1,

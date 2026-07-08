@@ -484,7 +484,35 @@ recent strip matches; fully-cached series/author/folder groups show the badge.
 
 ---
 
-### WP-12 — Drop podcast support (run before WP-3/4/5)
+### WP-12 — Drop podcast support (run before WP-3/4/5) ✅ DONE 2026-07-07
+
+> Completed on branch `wp12-drop-podcasts`. Deleted the 9-file podcast channel +
+> `AudioBookshelfPodcastSyncService` + 4 podcast converter tests; removed the
+> podcast-only methods/endpoints from `AudioBookshelfRepository` /
+> `AudiobookshelfApiClient`; unregistered the podcast channel in
+> `AudiobookshelfChannelProvider` (now always returns the library channel).
+> `meaningfulTypes = [LIBRARY]`. Every `when (libraryType)` UI branch collapsed to
+> `LIBRARY -> book wording; else -> generic "item" wording` (kept params + the
+> genuinely-live UNKNOWN state — a podcast-only server now yields UNKNOWN since
+> podcast libs aren't selectable). 765 unit tests green; kotlinter + Android
+> `lintVitalPersonal` clean; personal APK builds. Residual: on-device Android Auto
+> browse check.
+>
+> **Deviations from the steps below:**
+> - The library picker was **not** actually filtered by `meaningfulTypes` (the plan
+>   assumed it was). Added the filter in `SettingsViewModel.fetchLibraries()`
+>   (`response.data.filter { it.type in meaningfulTypes }`) so podcast libraries
+>   never appear or become the `firstOrNull` default — this is what satisfies the
+>   "library picker only offers book libraries" acceptance.
+> - **Kept** the auto-download-by-library-type plumbing
+>   (`LibraryTypeAutoCacheSettingsComposable`, `getAutoDownloadLibraryTypes`,
+>   `ContentAutoCachingService`) rather than ripping it out — it feeds real caching
+>   behavior and now degenerates to `[LIBRARY]`. Only de-podcasted its `when` arms.
+> - **Kept** the podcast-named English strings in `values/strings.xml` (now unused).
+>   Deleting them fails release `lintVital` (`MissingDefaultResource`) because 26
+>   Weblate locale files still declare those keys; per the strings ground rule we
+>   don't hand-edit locales. Unused-string cleanup (and the locale question) is
+>   deferred to **WP-10**.
 
 **Goal:** this fork is an audiobook app. Deleting the podcast path removes a
 whole parallel channel implementation and `when (libraryType)` branching from

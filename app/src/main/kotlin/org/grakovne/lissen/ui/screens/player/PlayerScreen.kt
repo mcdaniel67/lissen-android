@@ -2,13 +2,9 @@ package org.grakovne.lissen.ui.screens.player
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.keyframes
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -73,15 +69,12 @@ import org.grakovne.lissen.ui.screens.player.composable.MediaDetailComposable
 import org.grakovne.lissen.ui.screens.player.composable.NavigationBarComposable
 import org.grakovne.lissen.ui.screens.player.composable.PlayingQueueComposable
 import org.grakovne.lissen.ui.screens.player.composable.TrackControlComposable
-import org.grakovne.lissen.ui.screens.player.composable.TrackDetailsComposable
-import org.grakovne.lissen.ui.screens.player.composable.common.provideNowPlayingTitle
 import org.grakovne.lissen.ui.screens.player.composable.fallback.PlayingQueueFallbackComposable
 import org.grakovne.lissen.ui.screens.player.composable.placeholder.BookCoverPlaceholder
 import org.grakovne.lissen.ui.screens.player.composable.placeholder.ChapterNumberPlaceholder
 import org.grakovne.lissen.ui.screens.player.composable.placeholder.NavigationBarPlaceholderComposable
 import org.grakovne.lissen.ui.screens.player.composable.placeholder.PlayingQueuePlaceholderComposable
 import org.grakovne.lissen.ui.screens.player.composable.placeholder.TrackControlPlaceholderComposable
-import org.grakovne.lissen.ui.screens.player.composable.placeholder.TrackDetailsPlaceholderComposable
 import org.grakovne.lissen.ui.screens.player.composable.provideChapterNumberTitle
 import org.grakovne.lissen.viewmodel.CachingModelView
 import org.grakovne.lissen.viewmodel.LibraryViewModel
@@ -98,8 +91,6 @@ fun PlayerScreen(
   bookSubtitle: String?,
   playInstantly: Boolean,
 ) {
-  val context = LocalContext.current
-
   val twoPane = isWideLayout()
 
   val cachingModelView: CachingModelView = hiltViewModel()
@@ -111,7 +102,6 @@ fun PlayerScreen(
 
   val playingBook by playerViewModel.book.collectAsState()
   val isPlaybackReady by playerViewModel.isPlaybackReady.collectAsState()
-  val playingQueueExpanded by playerViewModel.playingQueueExpanded.collectAsState()
   val searchRequested by playerViewModel.searchRequested.collectAsState()
   val preparingError by playerViewModel.preparingError.collectAsState()
 
@@ -136,27 +126,17 @@ fun PlayerScreen(
 
   val libraryType by libraryViewModel.preferredLibraryType.collectAsState()
 
-  val screenTitle =
-    when {
-      playingQueueExpanded && twoPane.not() -> {
-        provideNowPlayingTitle(libraryType, context)
-      }
-
-      else -> {
-        stringResource(R.string.player_screen_title)
-      }
-    }
+  val screenTitle = stringResource(R.string.player_screen_title)
 
   fun stepBack() {
     when {
       searchRequested -> playerViewModel.dismissSearch()
-      playingQueueExpanded -> playerViewModel.collapsePlayingQueue()
       playInstantly -> navController.showLibrary(clearHistory = true)
       else -> navController.goBack()
     }
   }
 
-  BackHandler(enabled = searchRequested || playingQueueExpanded || playInstantly) {
+  BackHandler(enabled = searchRequested || playInstantly) {
     stepBack()
   }
 
@@ -186,12 +166,6 @@ fun PlayerScreen(
     }
   }
 
-  LaunchedEffect(playingQueueExpanded) {
-    if (playingQueueExpanded.not()) {
-      playerViewModel.dismissSearch()
-    }
-  }
-
   LaunchedEffect(playingBook) {
     playerViewModel.updateBookmarks()
   }
@@ -200,9 +174,6 @@ fun PlayerScreen(
     topBar = {
       TopAppBar(
         actions = {
-          val queueControlsVisible = playingQueueExpanded || twoPane
-          val bookActionsVisible = playingQueueExpanded.not() || twoPane
-
           AnimatedContent(
             targetState = searchRequested,
             label = "library_action_animation",
@@ -220,46 +191,42 @@ fun PlayerScreen(
 
               else -> {
                 Row {
-                  if (queueControlsVisible) {
-                    IconButton(
-                      onClick = { playerViewModel.requestSearch() },
-                      modifier = Modifier.padding(end = 4.dp),
-                    ) {
-                      Icon(
-                        imageVector = Search,
-                        contentDescription = null,
-                      )
-                    }
+                  IconButton(
+                    onClick = { playerViewModel.requestSearch() },
+                    modifier = Modifier.padding(end = 4.dp),
+                  ) {
+                    Icon(
+                      imageVector = Search,
+                      contentDescription = null,
+                    )
                   }
 
-                  if (bookActionsVisible) {
-                    IconButton(
-                      onClick = {
-                        if (isPlaybackReady) {
-                          playerViewModel.updateBookmarks()
-                          bookmarksSelected = true
-                        }
-                      },
-                      modifier = Modifier.padding(end = 4.dp),
-                    ) {
-                      Icon(
-                        imageVector = Icons.Outlined.Bookmarks,
-                        contentDescription = null,
-                      )
-                    }
+                  IconButton(
+                    onClick = {
+                      if (isPlaybackReady) {
+                        playerViewModel.updateBookmarks()
+                        bookmarksSelected = true
+                      }
+                    },
+                    modifier = Modifier.padding(end = 4.dp),
+                  ) {
+                    Icon(
+                      imageVector = Icons.Outlined.Bookmarks,
+                      contentDescription = null,
+                    )
+                  }
 
-                    IconButton(
-                      onClick = { itemDetailsSelected = true },
-                      modifier =
-                        Modifier
-                          .padding(end = 4.dp)
-                          .testTag("playerInfoButton"),
-                    ) {
-                      Icon(
-                        imageVector = Icons.Outlined.Info,
-                        contentDescription = null,
-                      )
-                    }
+                  IconButton(
+                    onClick = { itemDetailsSelected = true },
+                    modifier =
+                      Modifier
+                        .padding(end = 4.dp)
+                        .testTag("playerInfoButton"),
+                  ) {
+                    Icon(
+                      imageVector = Icons.Outlined.Info,
+                      contentDescription = null,
+                    )
                   }
                 }
               }
@@ -294,7 +261,7 @@ fun PlayerScreen(
     },
     bottomBar = {
       if (playingBook == null || isPlaybackReady.not()) {
-        NavigationBarPlaceholderComposable(libraryType = libraryType)
+        NavigationBarPlaceholderComposable()
       } else {
         playingBook
           ?.let {
@@ -339,7 +306,6 @@ fun PlayerScreen(
             libraryViewModel = libraryViewModel,
             cachingModelView = cachingModelView,
             playerViewModel = playerViewModel,
-            forceExpanded = true,
             modifier =
               Modifier
                 .weight(0.55f)
@@ -351,21 +317,31 @@ fun PlayerScreen(
           modifier =
             Modifier
               .testTag("playerScreen")
-              .padding(innerPadding),
+              .padding(innerPadding)
+              .fillMaxSize(),
           horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-          AnimatedVisibility(
-            visible = playingQueueExpanded.not(),
-            enter = expandVertically(animationSpec = tween(400)),
-            exit = shrinkVertically(animationSpec = tween(400)),
-          ) {
-            PlayerArtworkAndControls(
-              isPlaybackReady = isPlaybackReady,
-              bookTitle = bookTitle,
-              bookSubtitle = bookSubtitle,
-              playerViewModel = playerViewModel,
-              imageLoader = imageLoader,
-              libraryViewModel = libraryViewModel,
+          PlayerCompactHeader(
+            isPlaybackReady = isPlaybackReady,
+            playingBook = playingBook,
+            bookTitle = bookTitle,
+            bookSubtitle = bookSubtitle,
+            playerViewModel = playerViewModel,
+            libraryViewModel = libraryViewModel,
+            imageLoader = imageLoader,
+          )
+
+          Spacer(modifier = Modifier.height(8.dp))
+
+          if (isPlaybackReady) {
+            TrackControlComposable(
+              viewModel = playerViewModel,
+              modifier = Modifier,
+              settingsViewModel = settingsViewModel,
+            )
+          } else {
+            TrackControlPlaceholderComposable(
+              modifier = Modifier,
               settingsViewModel = settingsViewModel,
             )
           }
@@ -378,6 +354,10 @@ fun PlayerScreen(
             libraryViewModel = libraryViewModel,
             cachingModelView = cachingModelView,
             playerViewModel = playerViewModel,
+            modifier =
+              Modifier
+                .weight(1f)
+                .fillMaxWidth(),
           )
         }
       }
@@ -403,41 +383,91 @@ fun PlayerScreen(
 }
 
 @Composable
-private fun PlayerArtworkAndControls(
+private fun PlayerCompactHeader(
   isPlaybackReady: Boolean,
+  playingBook: DetailedItem?,
   bookTitle: String,
   bookSubtitle: String?,
   playerViewModel: PlayerViewModel,
-  imageLoader: ImageLoader,
   libraryViewModel: LibraryViewModel,
-  settingsViewModel: SettingsViewModel,
+  imageLoader: ImageLoader,
   modifier: Modifier = Modifier,
 ) {
-  Column(
-    horizontalAlignment = Alignment.CenterHorizontally,
-    modifier = modifier,
+  val context = LocalContext.current
+  val currentChapterIndex by playerViewModel.currentChapterIndex.collectAsState()
+
+  val coverSize = 96.dp
+
+  Row(
+    verticalAlignment = Alignment.CenterVertically,
+    modifier =
+      Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 16.dp)
+        .then(modifier),
   ) {
-    if (!isPlaybackReady) {
-      TrackDetailsPlaceholderComposable(bookTitle, bookSubtitle)
-    } else {
-      TrackDetailsComposable(
-        viewModel = playerViewModel,
+    if (isPlaybackReady) {
+      BookCover(
+        book = playingBook,
         imageLoader = imageLoader,
-        libraryViewModel = libraryViewModel,
+        modifier = Modifier.size(coverSize),
+      )
+    } else {
+      BookCoverPlaceholder(
+        modifier = Modifier.size(coverSize),
       )
     }
 
-    if (!isPlaybackReady) {
-      TrackControlPlaceholderComposable(
-        modifier = Modifier,
-        settingsViewModel = settingsViewModel,
+    Spacer(modifier = Modifier.width(16.dp))
+
+    Column(
+      modifier = Modifier.weight(1f),
+    ) {
+      Text(
+        text = playingBook?.title ?: bookTitle,
+        style = typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = colorScheme.onBackground,
+        overflow = TextOverflow.Ellipsis,
+        maxLines = 2,
       )
-    } else {
-      TrackControlComposable(
-        viewModel = playerViewModel,
-        modifier = Modifier,
-        settingsViewModel = settingsViewModel,
-      )
+
+      val subtitle =
+        playingBook?.author?.takeIf { it.isNotBlank() }
+          ?: playingBook?.subtitle?.takeIf { it.isNotBlank() }
+          ?: bookSubtitle?.takeIf { it.isNotBlank() }
+
+      subtitle?.let {
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+          text = it,
+          style = typography.bodyMedium,
+          color = colorScheme.onBackground.copy(alpha = 0.6f),
+          overflow = TextOverflow.Ellipsis,
+          maxLines = 1,
+        )
+      }
+
+      Spacer(modifier = Modifier.height(4.dp))
+
+      if (isPlaybackReady) {
+        Text(
+          text =
+            provideChapterNumberTitle(
+              currentTrackIndex = currentChapterIndex,
+              book = playingBook,
+              libraryType = libraryViewModel.fetchPreferredLibraryType(),
+              context = context,
+            ),
+          style = typography.bodyMedium,
+          color = colorScheme.onBackground.copy(alpha = 0.6f),
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+          modifier = Modifier.testTag("playerChapterNumber"),
+        )
+      } else {
+        ChapterNumberPlaceholder(modifier = Modifier.testTag("playerChapterNumber"))
+      }
     }
   }
 }
@@ -549,7 +579,6 @@ private fun PlayerQueueSection(
   cachingModelView: CachingModelView,
   playerViewModel: PlayerViewModel,
   modifier: Modifier = Modifier,
-  forceExpanded: Boolean = false,
 ) {
   when {
     isPlaybackReady.not() -> {
@@ -572,7 +601,6 @@ private fun PlayerQueueSection(
         cachingModelView = cachingModelView,
         viewModel = playerViewModel,
         modifier = modifier,
-        forceExpanded = forceExpanded,
       )
     }
   }

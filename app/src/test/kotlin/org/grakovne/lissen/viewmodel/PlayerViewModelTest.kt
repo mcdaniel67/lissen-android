@@ -72,40 +72,6 @@ class PlayerViewModelTest {
   }
 
   @Nested
-  inner class PlayingQueue {
-    @Test
-    fun `expandPlayingQueue sets playingQueueExpanded to true`() {
-      viewModel.expandPlayingQueue()
-      assertTrue(viewModel.playingQueueExpanded.value)
-    }
-
-    @Test
-    fun `collapsePlayingQueue sets playingQueueExpanded to false`() {
-      viewModel.expandPlayingQueue()
-      viewModel.collapsePlayingQueue()
-      assertFalse(viewModel.playingQueueExpanded.value)
-    }
-
-    @Test
-    fun `togglePlayingQueue expands when collapsed`() {
-      viewModel.togglePlayingQueue()
-      assertTrue(viewModel.playingQueueExpanded.value)
-    }
-
-    @Test
-    fun `togglePlayingQueue collapses when expanded`() {
-      viewModel.expandPlayingQueue()
-      viewModel.togglePlayingQueue()
-      assertFalse(viewModel.playingQueueExpanded.value)
-    }
-
-    @Test
-    fun `playingQueueExpanded is initially false`() {
-      assertFalse(viewModel.playingQueueExpanded.value)
-    }
-  }
-
-  @Nested
   inner class SearchState {
     @Test
     fun `requestSearch sets searchRequested to true`() {

@@ -122,6 +122,20 @@ class PlayerE2ETest {
   }
 
   @Test
+  fun player_chapterListIsVisibleWithoutToggle() {
+    loginAndOpenBook()
+
+    // The player is now a single fixed layout: the chapter list is always visible,
+    // with no expand/collapse gesture or "Chapters" nav toggle to reveal it.
+    composeRule.waitUntilAtLeastOneExists(
+      matcher = hasTestTag("chapterList"),
+      timeoutMillis = TIMEOUT_MS,
+    )
+
+    composeRule.onNodeWithTag("chapterList").assertIsDisplayed()
+  }
+
+  @Test
   fun player_backButtonNavigatesToLibrary() {
     loginAndOpenBook()
 

@@ -1,14 +1,7 @@
 package org.grakovne.lissen.ui.screens.player.composable
 
-import android.view.ViewConfiguration
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.scrollable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -21,14 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Text
@@ -37,30 +23,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.android.awaitFrame
-import kotlinx.coroutines.launch
-import org.grakovne.lissen.R
 import org.grakovne.lissen.ui.components.withScrollbar
 import org.grakovne.lissen.ui.screens.player.composable.common.provideNowPlayingTitle
 import org.grakovne.lissen.viewmodel.CachingModelView
@@ -73,10 +42,8 @@ fun PlayingQueueComposable(
   cachingModelView: CachingModelView,
   viewModel: PlayerViewModel,
   modifier: Modifier = Modifier,
-  forceExpanded: Boolean = false,
 ) {
   val context = LocalContext.current
-  val coroutineScope = rememberCoroutineScope()
 
   val book by viewModel.book.collectAsState()
   val searchToken by viewModel.searchToken.collectAsState()
@@ -108,21 +75,6 @@ fun PlayingQueueComposable(
   }
 
   val playbackReady by viewModel.isPlaybackReady.collectAsState()
-  val playingQueueExpanded by viewModel.playingQueueExpanded.collectAsState()
-
-  val expanded = playingQueueExpanded || forceExpanded
-
-  val showQueueHeader = playingQueueExpanded.not() || forceExpanded
-
-  val density = LocalDensity.current
-
-  var collapsedPlayingQueueHeight by remember { mutableIntStateOf(0) }
-
-  val expandFlingThreshold =
-    remember { ViewConfiguration.get(context).scaledMinimumFlingVelocity.toFloat() * 2 }
-
-  val collapseFlingThreshold =
-    remember { ViewConfiguration.get(context).scaledMaximumFlingVelocity.toFloat() * 0.3 }
 
   val listState = rememberLazyListState()
 
@@ -137,241 +89,110 @@ fun PlayingQueueComposable(
     animationSpec = tween(durationMillis = 300),
   )
 
-  val fontSize by animateFloatAsState(
-    targetValue = typography.titleMedium.fontSize.value * 1.25f,
-    animationSpec = tween(durationMillis = 500),
-    label = "playing_queue_font_size",
-  )
-
-  var showCollapseFab by remember { mutableStateOf(false) }
-
-  LaunchedEffect(playingQueueExpanded) {
-    if (!playingQueueExpanded) {
-      showCollapseFab = false
-    }
-  }
-
-  val fabScrollConnection =
-    remember(playingQueueExpanded, density) {
-      val slopPx = with(density) { 4.dp.toPx() }
-
-      object : NestedScrollConnection {
-        override fun onPreScroll(
-          available: Offset,
-          source: NestedScrollSource,
-        ): Offset {
-          if (!playingQueueExpanded) return Offset.Zero
-
-          when {
-            available.y > slopPx -> {
-              if (!showCollapseFab) {
-                showCollapseFab = true
-              }
-            }
-
-            available.y < -slopPx -> {
-              if (showCollapseFab) {
-                showCollapseFab = false
-              }
-            }
-          }
-
-          return Offset.Zero
-        }
-
-        override suspend fun onPreFling(available: Velocity): Velocity {
-          if (!playingQueueExpanded) return Velocity.Zero
-
-          when {
-            available.y > 0f -> showCollapseFab = true
-            available.y < 0f -> showCollapseFab = false
-          }
-
-          return Velocity.Zero
-        }
-      }
-    }
-
   LaunchedEffect(currentTrackIndex) {
     awaitFrame()
     scrollPlayingQueue(
       currentTrackIndex = currentTrackIndex,
       listState = listState,
       playbackReady = playbackReady,
-      animate = true,
-      playingQueueExpanded = playingQueueExpanded,
     )
   }
 
-  Box(
+  Column(
     modifier =
       modifier
         .testTag("chapterList")
         .fillMaxSize()
-        .nestedScroll(fabScrollConnection),
+        .withScrollbar(
+          state = listState,
+          color = colorScheme.onBackground.copy(alpha = scrollbarAlpha),
+          totalItems = showingChapters.size,
+          ignoreItems = emptyList(),
+        ).padding(horizontal = 16.dp),
   ) {
-    Column(
-      modifier =
-        Modifier
-          .fillMaxSize()
-          .let {
-            when (expanded) {
-              true -> {
-                it.withScrollbar(
-                  state = listState,
-                  color = colorScheme.onBackground.copy(alpha = scrollbarAlpha),
-                  totalItems = showingChapters.size,
-                  ignoreItems = emptyList(),
-                )
-              }
+    Text(
+      text = provideNowPlayingTitle(libraryViewModel.fetchPreferredLibraryType(), context),
+      fontSize = typography.titleMedium.fontSize * 1.25f,
+      fontWeight = FontWeight.SemiBold,
+      color = colorScheme.primary,
+      modifier = Modifier.padding(horizontal = 6.dp),
+    )
 
-              false -> {
-                it
-              }
-            }
-          }.padding(horizontal = 16.dp),
+    Spacer(modifier = Modifier.height(12.dp))
+
+    LazyColumn(
+      contentPadding = PaddingValues(bottom = 12.dp),
+      modifier = Modifier.fillMaxHeight(),
+      state = listState,
     ) {
-      if (showQueueHeader) {
-        Text(
-          text = provideNowPlayingTitle(libraryViewModel.fetchPreferredLibraryType(), context),
-          fontSize = fontSize.sp,
-          fontWeight = FontWeight.SemiBold,
-          color = colorScheme.primary,
-          modifier = Modifier.padding(horizontal = 6.dp),
-        )
+      val maxDuration = showingChapters.maxOfOrNull { it.duration } ?: 0.0
 
-        Spacer(modifier = Modifier.height(12.dp))
-      }
+      itemsIndexed(
+        showingChapters,
+        key = { _, chapter -> chapter.id },
+      ) { index, chapter ->
+        val bookId = book?.id ?: ""
 
-      LazyColumn(
-        contentPadding =
-          when (expanded) {
-            true -> PaddingValues(bottom = 12.dp)
-            false -> PaddingValues(bottom = with(density) { collapsedPlayingQueueHeight.toDp() })
-          },
-        modifier =
-          Modifier
-            .fillMaxHeight()
-            .scrollable(
-              state = rememberScrollState(),
-              orientation = Orientation.Vertical,
-              enabled = expanded,
-            ).onGloballyPositioned {
-              if (collapsedPlayingQueueHeight == 0) {
-                collapsedPlayingQueueHeight = it.size.height
-              }
-            }.onSizeChanged { intSize ->
-              if (intSize.height != collapsedPlayingQueueHeight) {
-                coroutineScope.launch {
-                  awaitFrame()
-                  scrollPlayingQueue(
-                    currentTrackIndex = currentTrackIndex,
-                    listState = listState,
-                    playbackReady = playbackReady,
-                    animate = false,
-                    playingQueueExpanded = playingQueueExpanded,
-                  )
-                }
-              }
-            }.nestedScroll(
-              object : NestedScrollConnection {
-                override fun onPreScroll(
-                  available: Offset,
-                  source: NestedScrollSource,
-                ): Offset = if (expanded) Offset.Zero else available
-
-                override suspend fun onPreFling(available: Velocity): Velocity {
-                  if (available.y < -expandFlingThreshold && !expanded) {
-                    viewModel.expandPlayingQueue()
-                    return available
-                  }
-
-                  return Velocity.Zero
-                }
-              },
-            ),
-        state = listState,
-      ) {
-        val maxDuration = showingChapters.maxOfOrNull { it.duration } ?: 0.0
-
-        itemsIndexed(
-          showingChapters,
-          key = { _, chapter -> chapter.id },
-        ) { index, chapter ->
-          val bookId = book?.id ?: ""
-
-          val cacheStateFlow =
-            remember(bookId, chapter.id) {
-              cachingModelView.provideCacheState(bookId = bookId, chapterId = chapter.id)
-            }
-          val isCached by cacheStateFlow.collectAsState(initial = false)
-
-          PlaylistItemComposable(
-            track = chapter,
-            onClick = { viewModel.setChapter(chapter) },
-            isSelected = chapter.id == currentTrackId?.id,
-            modifier = Modifier.wrapContentWidth(),
-            maxDuration = maxDuration,
-            isCached = isCached,
-          )
-
-          if (index < showingChapters.size - 1) {
-            HorizontalDivider(
-              thickness = 1.dp,
-              modifier =
-                Modifier
-                  .padding(start = 24.dp)
-                  .padding(vertical = 8.dp),
-            )
+        val cacheStateFlow =
+          remember(bookId, chapter.id) {
+            cachingModelView.provideCacheState(bookId = bookId, chapterId = chapter.id)
           }
-        }
-      }
-    }
+        val isCached by cacheStateFlow.collectAsState(initial = false)
 
-    AnimatedVisibility(
-      visible = playingQueueExpanded && showCollapseFab,
-      enter = fadeIn(),
-      exit = fadeOut(),
-      modifier =
-        Modifier
-          .align(Alignment.BottomCenter)
-          .padding(bottom = 16.dp),
-    ) {
-      FloatingActionButton(
-        shape = CircleShape,
-        onClick = { viewModel.collapsePlayingQueue() },
-        containerColor = colorScheme.surfaceContainer,
-        elevation = FloatingActionButtonDefaults.loweredElevation(0.dp),
-      ) {
-        Icon(
-          imageVector = Icons.Filled.KeyboardArrowDown,
-          contentDescription = stringResource(R.string.a11y_collapse_queue),
-          tint = colorScheme.onBackground,
+        PlaylistItemComposable(
+          track = chapter,
+          onClick = { viewModel.setChapter(chapter) },
+          isSelected = chapter.id == currentTrackId?.id,
+          modifier = Modifier.wrapContentWidth(),
+          maxDuration = maxDuration,
+          isCached = isCached,
         )
+
+        if (index < showingChapters.size - 1) {
+          HorizontalDivider(
+            thickness = 1.dp,
+            modifier =
+              Modifier
+                .padding(start = 24.dp)
+                .padding(vertical = 8.dp),
+          )
+        }
       }
     }
   }
 }
 
+/**
+ * Auto-scrolls the chapter list so the current chapter is centered.
+ *
+ * The list is now the only scrollable surface on the player, so the user drives it directly.
+ * To avoid fighting an in-progress user scroll, we skip auto-scrolling while the list is being
+ * dragged/flung: a chapter change that lands during an active user scroll simply won't re-center
+ * (the next chapter change, or the scroll settling, resolves it). Taps on a chapter row are not
+ * "scroll in progress", so tapping a chapter still recenters as expected.
+ */
 private suspend fun scrollPlayingQueue(
   currentTrackIndex: Int,
   listState: LazyListState,
   playbackReady: Boolean,
-  animate: Boolean,
-  playingQueueExpanded: Boolean,
 ) {
-  if (playingQueueExpanded) {
+  if (listState.isScrollInProgress) {
     return
   }
 
-  val targetIndex =
-    when (currentTrackIndex > 0) {
-      true -> currentTrackIndex - 1
-      false -> 0
+  val targetIndex = currentTrackIndex.coerceAtLeast(0)
+
+  val layoutInfo = listState.layoutInfo
+  val viewportHeight = layoutInfo.viewportSize.height
+  val itemHeight = layoutInfo.visibleItemsInfo.firstOrNull()?.size ?: 0
+  val centeringOffset =
+    when {
+      viewportHeight > 0 && itemHeight in 1 until viewportHeight -> -((viewportHeight - itemHeight) / 2)
+      else -> 0
     }
 
-  when (animate && playbackReady) {
-    true -> listState.animateScrollToItem(targetIndex)
-    false -> listState.scrollToItem(targetIndex)
+  when (playbackReady) {
+    true -> listState.animateScrollToItem(targetIndex, centeringOffset)
+    false -> listState.scrollToItem(targetIndex, centeringOffset)
   }
 }

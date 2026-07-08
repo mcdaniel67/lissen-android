@@ -156,6 +156,13 @@ class LandscapeE2ETest {
 
     composeRule.onNodeWithTag("playerArtworkPane").assertIsDisplayed()
     composeRule.onNodeWithTag("playerScreen").assertIsDisplayed()
+
+    // The queue pane is permanently visible alongside the artwork pane.
+    composeRule.waitUntilAtLeastOneExists(
+      matcher = hasTestTag("chapterList"),
+      timeoutMillis = TIMEOUT_MS,
+    )
+    composeRule.onNodeWithTag("chapterList").assertIsDisplayed()
   }
 
   @Test

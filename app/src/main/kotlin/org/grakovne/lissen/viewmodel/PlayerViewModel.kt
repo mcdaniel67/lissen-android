@@ -37,9 +37,6 @@ class PlayerViewModel
     val timerOption: StateFlow<TimerOption?> = mediaRepository.timerOption
     val timerRemaining: StateFlow<Long?> = mediaRepository.timerRemaining
 
-    private val _playingQueueExpanded = MutableStateFlow(false)
-    val playingQueueExpanded: StateFlow<Boolean> = _playingQueueExpanded.asStateFlow()
-
     val isPlaybackReady: StateFlow<Boolean> = mediaRepository.isPlaybackReady
     val playbackSpeed: StateFlow<Float> = mediaRepository.playbackSpeed
     val preparingError: StateFlow<Boolean> = mediaRepository.mediaPreparingError
@@ -81,21 +78,9 @@ class PlayerViewModel
       }
     }
 
-    fun expandPlayingQueue() {
-      _playingQueueExpanded.value = true
-    }
-
     fun setTimer(option: TimerOption?) {
       Timber.d("User action: setTimer option=$option")
       mediaRepository.updateTimer(option)
-    }
-
-    fun collapsePlayingQueue() {
-      _playingQueueExpanded.value = false
-    }
-
-    fun togglePlayingQueue() {
-      _playingQueueExpanded.value = !_playingQueueExpanded.value
     }
 
     fun requestSearch() {

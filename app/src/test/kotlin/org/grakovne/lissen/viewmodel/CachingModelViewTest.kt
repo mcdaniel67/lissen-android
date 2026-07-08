@@ -180,6 +180,68 @@ class CachingModelViewTest {
   }
 
   @Nested
+  inner class RunningDownloads {
+    @Test
+    fun `runningDownloads is initially empty`() {
+      assertTrue(viewModel.runningDownloads.value.isEmpty())
+    }
+
+    @Test
+    fun `runningDownloads tracks progress for books currently caching`() =
+      runTest(testDispatcher) {
+        statusFlow.emit("book-1" to CacheState(CacheStatus.Caching, 0.3))
+
+        assertEquals(0.3, viewModel.runningDownloads.value["book-1"])
+      }
+
+    @Test
+    fun `runningDownloads drops a book once it is no longer caching`() =
+      runTest(testDispatcher) {
+        statusFlow.emit("book-1" to CacheState(CacheStatus.Caching, 0.3))
+        assertTrue(viewModel.runningDownloads.value.containsKey("book-1"))
+
+        statusFlow.emit("book-1" to CacheState(CacheStatus.Completed))
+
+        assertTrue(
+          viewModel.runningDownloads.value
+            .containsKey("book-1")
+            .not(),
+        )
+      }
+
+    @Test
+    fun `runningDownloads tracks multiple books independently`() =
+      runTest(testDispatcher) {
+        statusFlow.emit("book-1" to CacheState(CacheStatus.Caching, 0.1))
+        statusFlow.emit("book-2" to CacheState(CacheStatus.Caching, 0.9))
+
+        assertEquals(0.1, viewModel.runningDownloads.value["book-1"])
+        assertEquals(0.9, viewModel.runningDownloads.value["book-2"])
+      }
+  }
+
+  @Nested
+  inner class DownloadStateOf {
+    @Test
+    fun `downloadStateOf is Downloaded when book id is in cachedIds regardless of running map`() {
+      val state = viewModel.downloadStateOf("book-1", setOf("book-1"), mapOf("book-1" to 0.4))
+      assertEquals(BookDownloadState.Downloaded, state)
+    }
+
+    @Test
+    fun `downloadStateOf is Downloading with progress when present in the running map only`() {
+      val state = viewModel.downloadStateOf("book-1", emptySet(), mapOf("book-1" to 0.7))
+      assertEquals(BookDownloadState.Downloading(0.7), state)
+    }
+
+    @Test
+    fun `downloadStateOf is NotDownloaded when absent from both sets`() {
+      val state = viewModel.downloadStateOf("book-1", emptySet(), emptyMap())
+      assertEquals(BookDownloadState.NotDownloaded, state)
+    }
+  }
+
+  @Nested
   inner class ProvideCacheState {
     @Test
     fun `provideCacheState delegates to contentCachingManager`() {

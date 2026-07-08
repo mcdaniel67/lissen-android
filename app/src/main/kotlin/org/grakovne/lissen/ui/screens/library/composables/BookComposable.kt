@@ -17,7 +17,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.outlined.DownloadForOffline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -41,8 +40,10 @@ import coil3.request.ImageRequest
 import org.grakovne.lissen.R
 import org.grakovne.lissen.common.LibraryGrouping
 import org.grakovne.lissen.domain.Book
+import org.grakovne.lissen.domain.BookDownloadState
 import org.grakovne.lissen.ui.components.AsyncShimmeringImage
 import org.grakovne.lissen.ui.components.BookCoverKey
+import org.grakovne.lissen.ui.components.DownloadStateIcon
 import org.grakovne.lissen.ui.navigation.AppNavigationService
 
 val LibraryItemCoverSize = 64.dp
@@ -55,7 +56,7 @@ fun BookComposable(
   navController: AppNavigationService,
   grouping: LibraryGrouping = LibraryGrouping.NONE,
   leading: (@Composable () -> Unit)? = null,
-  downloaded: Boolean = false,
+  downloadState: BookDownloadState = BookDownloadState.NotDownloaded,
   selectionMode: Boolean = false,
   selected: Boolean = false,
   onSelectToggle: () -> Unit = {},
@@ -166,16 +167,18 @@ fun BookComposable(
       BookMetadataComposable(book, grouping)
     }
 
-    if (downloaded) {
+    if (downloadState != BookDownloadState.NotDownloaded) {
       Spacer(Modifier.width(12.dp))
-      Icon(
-        imageVector = Icons.Outlined.DownloadForOffline,
-        contentDescription = stringResource(R.string.library_item_downloaded_indicator),
-        tint = MaterialTheme.colorScheme.primary,
-        modifier =
-          Modifier
-            .size(20.dp)
-            .testTag("downloadedIndicator_${book.id}"),
+      DownloadStateIcon(
+        downloadState = downloadState,
+        size = 20.dp,
+        contentDescription =
+          when (downloadState) {
+            is BookDownloadState.Downloaded -> stringResource(R.string.library_item_downloaded_indicator)
+            is BookDownloadState.Downloading -> stringResource(R.string.library_item_downloading_indicator)
+            is BookDownloadState.NotDownloaded -> null
+          },
+        modifier = Modifier.testTag("downloadedIndicator_${book.id}"),
       )
     }
 

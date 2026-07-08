@@ -30,6 +30,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -42,8 +43,10 @@ import org.grakovne.lissen.R
 import org.grakovne.lissen.common.LibraryGrouping
 import org.grakovne.lissen.common.seriesSequence
 import org.grakovne.lissen.domain.Book
+import org.grakovne.lissen.domain.BookDownloadState
 import org.grakovne.lissen.domain.LibraryEntry
 import org.grakovne.lissen.ui.components.AsyncShimmeringImage
+import org.grakovne.lissen.ui.components.DownloadStateIcon
 import org.grakovne.lissen.ui.components.SeriesCoverKey
 import org.grakovne.lissen.ui.navigation.AppNavigationService
 
@@ -60,7 +63,7 @@ fun SeriesComposable(
   navController: AppNavigationService,
   onToggle: () -> Unit,
   onPrefetch: () -> Unit,
-  downloadedIds: Set<String> = emptySet(),
+  resolveDownloadState: (String) -> BookDownloadState = { BookDownloadState.NotDownloaded },
 ) {
   val context = LocalContext.current
 
@@ -128,6 +131,19 @@ fun SeriesComposable(
         )
       }
 
+      val allDownloaded =
+        books.isNotEmpty() && books.all { resolveDownloadState(it.id) == BookDownloadState.Downloaded }
+
+      if (allDownloaded) {
+        Spacer(Modifier.width(12.dp))
+        DownloadStateIcon(
+          downloadState = BookDownloadState.Downloaded,
+          size = 20.dp,
+          contentDescription = stringResource(R.string.library_item_downloaded_indicator),
+          modifier = Modifier.testTag("downloadedIndicator_${series.id}"),
+        )
+      }
+
       Spacer(Modifier.width(16.dp))
 
       Icon(
@@ -166,7 +182,7 @@ fun SeriesComposable(
                 imageLoader = imageLoader,
                 navController = navController,
                 grouping = LibraryGrouping.SERIES,
-                downloaded = book.id in downloadedIds,
+                downloadState = resolveDownloadState(book.id),
                 leading = { SeriesSequenceLabel(number = sequences[index], widthReserve = widthReserve) },
               )
             }

@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.grakovne.lissen.content.cache.persistent.CacheState
@@ -70,6 +71,15 @@ class CachingModelView
 
     private val _bookCachingProgress = mutableMapOf<String, MutableStateFlow<CacheState>>()
 
+    private val _runningDownloads = MutableStateFlow<Map<String, Double>>(emptyMap())
+
+    /**
+     * In-session progress of books currently caching, keyed by book id, observed once for the
+     * whole library list so rows can render a downloading ring without each subscribing its own
+     * per-book progress flow.
+     */
+    val runningDownloads: StateFlow<Map<String, Double>> = _runningDownloads.asStateFlow()
+
     private val pageConfig =
       PagingConfig(
         pageSize = PAGE_SIZE,
@@ -98,6 +108,13 @@ class CachingModelView
               MutableStateFlow(progress)
             }
           flow.value = progress
+
+          _runningDownloads.update { running ->
+            when (progress.status) {
+              is CacheStatus.Caching -> running + (itemId to progress.progress)
+              else -> running - itemId
+            }
+          }
         }
       }
     }
@@ -147,6 +164,22 @@ class CachingModelView
           progress.status is CacheStatus.Caching -> BookDownloadState.Downloading(progress.progress)
           else -> BookDownloadState.NotDownloaded
         }
+      }
+
+    /**
+     * Pure resolver mirroring [downloadState] for list-wide rendering: rows compute their state
+     * from a single observed [cachedBookIds] set and [runningDownloads] map instead of each
+     * opening a per-book flow.
+     */
+    fun downloadStateOf(
+      bookId: String,
+      cachedIds: Set<String>,
+      running: Map<String, Double>,
+    ): BookDownloadState =
+      when {
+        bookId in cachedIds -> BookDownloadState.Downloaded
+        running.containsKey(bookId) -> BookDownloadState.Downloading(running.getValue(bookId))
+        else -> BookDownloadState.NotDownloaded
       }
 
     suspend fun dropCache(bookId: String) {

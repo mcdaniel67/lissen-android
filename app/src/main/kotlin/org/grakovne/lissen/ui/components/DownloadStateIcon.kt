@@ -12,6 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.grakovne.lissen.R
@@ -22,13 +24,19 @@ fun DownloadStateIcon(
   downloadState: BookDownloadState,
   size: Dp,
   modifier: Modifier = Modifier,
+  contentDescription: String? = null,
 ) {
+  val description = contentDescription ?: stringResource(R.string.player_screen_downloads_navigation)
+
   when (downloadState) {
     is BookDownloadState.Downloading -> {
       val iconSize = size - 2.dp
       CircularProgressIndicator(
         progress = { downloadState.progress.coerceIn(0.0, 1.0).toFloat() },
-        modifier = modifier.size(iconSize),
+        modifier =
+          modifier
+            .size(iconSize)
+            .semantics { this.contentDescription = description },
         strokeWidth = iconSize * 0.1f,
         color = colorScheme.primary,
         trackColor = LocalContentColor.current,
@@ -40,7 +48,7 @@ fun DownloadStateIcon(
     is BookDownloadState.Downloaded -> {
       Icon(
         imageVector = Icons.Filled.CloudDone,
-        contentDescription = stringResource(R.string.player_screen_downloads_navigation),
+        contentDescription = description,
         tint = colorScheme.primary,
         modifier = modifier.size(size),
       )
@@ -49,7 +57,7 @@ fun DownloadStateIcon(
     is BookDownloadState.NotDownloaded -> {
       Icon(
         imageVector = Icons.Outlined.CloudDownload,
-        contentDescription = stringResource(R.string.player_screen_downloads_navigation),
+        contentDescription = description,
         modifier = modifier.size(size),
       )
     }

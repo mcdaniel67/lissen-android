@@ -149,6 +149,8 @@ fun LibraryScreen(
   val selectionActive by libraryViewModel.selectionActive.collectAsState()
   val selectedBookIds by libraryViewModel.selectedBookIds.collectAsState()
   val downloadedIds by cachingModelView.cachedBookIds.collectAsState()
+  val runningDownloads by cachingModelView.runningDownloads.collectAsState()
+  val resolveDownloadState = { bookId: String -> cachingModelView.downloadStateOf(bookId, downloadedIds, runningDownloads) }
   val folders by libraryViewModel.folders.collectAsState()
   var showCreateFolder by remember { mutableStateOf(false) }
   var folderPendingDelete by remember { mutableStateOf<LibraryEntry.FolderEntry?>(null) }
@@ -461,6 +463,7 @@ fun LibraryScreen(
                     recentBooks = recentBooks,
                     imageLoader = imageLoader,
                     libraryViewModel = libraryViewModel,
+                    resolveDownloadState = resolveDownloadState,
                   )
 
                   Spacer(modifier = Modifier.height(RECENT_SECTION_SPACING))
@@ -537,7 +540,7 @@ fun LibraryScreen(
                 navController = navController,
                 onToggle = { libraryViewModel.toggleGroup(folder) },
                 onLongClick = { folderPendingDelete = folder },
-                downloadedIds = downloadedIds,
+                resolveDownloadState = resolveDownloadState,
               )
             }
           }
@@ -567,7 +570,7 @@ fun LibraryScreen(
                       imageLoader = imageLoader,
                       navController = navController,
                       grouping = libraryGrouping,
-                      downloaded = entry.book.id in downloadedIds,
+                      downloadState = resolveDownloadState(entry.book.id),
                       selectionMode = selectionActive,
                       selected = entry.book.id in selectedBookIds,
                       onSelectToggle = { libraryViewModel.toggleSelection(entry.book) },
@@ -585,7 +588,7 @@ fun LibraryScreen(
                       navController = navController,
                       onToggle = { libraryViewModel.toggleGroup(entry) },
                       onPrefetch = { libraryViewModel.prefetchGroup(entry) },
-                      downloadedIds = downloadedIds,
+                      resolveDownloadState = resolveDownloadState,
                     )
                   }
 
@@ -599,7 +602,7 @@ fun LibraryScreen(
                       navController = navController,
                       onToggle = { libraryViewModel.toggleGroup(entry) },
                       onPrefetch = { libraryViewModel.prefetchGroup(entry) },
-                      downloadedIds = downloadedIds,
+                      resolveDownloadState = resolveDownloadState,
                     )
                   }
 

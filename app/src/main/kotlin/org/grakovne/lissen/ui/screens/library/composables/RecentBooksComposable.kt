@@ -14,8 +14,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.typography
@@ -31,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -43,11 +46,13 @@ import coil3.ImageLoader
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import org.grakovne.lissen.R
+import org.grakovne.lissen.domain.BookDownloadState
 import org.grakovne.lissen.domain.LibraryType
 import org.grakovne.lissen.domain.RecentBook
 import org.grakovne.lissen.ui.adaptive.recentBookItemWidth
 import org.grakovne.lissen.ui.components.AsyncShimmeringImage
 import org.grakovne.lissen.ui.components.BookCoverKey
+import org.grakovne.lissen.ui.components.DownloadStateIcon
 import org.grakovne.lissen.ui.navigation.AppNavigationService
 import org.grakovne.lissen.viewmodel.LibraryViewModel
 
@@ -58,6 +63,7 @@ fun RecentBooksComposable(
   imageLoader: ImageLoader,
   modifier: Modifier = Modifier,
   libraryViewModel: LibraryViewModel,
+  resolveDownloadState: (String) -> BookDownloadState = { BookDownloadState.NotDownloaded },
 ) {
   val itemWidth = recentBookItemWidth()
 
@@ -77,6 +83,7 @@ fun RecentBooksComposable(
           imageLoader = imageLoader,
           navController = navController,
           libraryViewModel = libraryViewModel,
+          downloadState = resolveDownloadState(book.id),
         )
       }
   }
@@ -89,6 +96,7 @@ fun RecentBookItemComposable(
   width: Dp,
   imageLoader: ImageLoader,
   libraryViewModel: LibraryViewModel,
+  downloadState: BookDownloadState = BookDownloadState.NotDownloaded,
 ) {
   val openLabel = stringResource(R.string.a11y_open)
 
@@ -135,6 +143,31 @@ fun RecentBookItemComposable(
           error = painterResource(R.drawable.cover_fallback),
           onLoadingStateChanged = { coverLoading = it },
         )
+
+        if (downloadState != BookDownloadState.NotDownloaded) {
+          Box(
+            modifier =
+              Modifier
+                .align(Alignment.TopEnd)
+                .padding(6.dp)
+                .size(22.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.55f)),
+            contentAlignment = Alignment.Center,
+          ) {
+            DownloadStateIcon(
+              downloadState = downloadState,
+              size = 16.dp,
+              contentDescription =
+                when (downloadState) {
+                  is BookDownloadState.Downloaded -> stringResource(R.string.library_item_downloaded_indicator)
+                  is BookDownloadState.Downloading -> stringResource(R.string.library_item_downloading_indicator)
+                  is BookDownloadState.NotDownloaded -> null
+                },
+              modifier = Modifier.testTag("recentDownloadedIndicator_${book.id}"),
+            )
+          }
+        }
       }
 
       if (libraryViewModel.fetchPreferredLibraryType() == LibraryType.LIBRARY) {

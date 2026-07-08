@@ -28,13 +28,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
 import org.grakovne.lissen.R
 import org.grakovne.lissen.domain.Book
+import org.grakovne.lissen.domain.BookDownloadState
 import org.grakovne.lissen.domain.LibraryEntry
+import org.grakovne.lissen.ui.components.DownloadStateIcon
 import org.grakovne.lissen.ui.navigation.AppNavigationService
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -48,7 +51,7 @@ fun FolderComposable(
   navController: AppNavigationService,
   onToggle: () -> Unit,
   onLongClick: () -> Unit,
-  downloadedIds: Set<String> = emptySet(),
+  resolveDownloadState: (String) -> BookDownloadState = { BookDownloadState.NotDownloaded },
 ) {
   val context = LocalContext.current
 
@@ -108,6 +111,19 @@ fun FolderComposable(
         )
       }
 
+      val allDownloaded =
+        books.isNotEmpty() && books.all { resolveDownloadState(it.id) == BookDownloadState.Downloaded }
+
+      if (allDownloaded) {
+        Spacer(Modifier.width(12.dp))
+        DownloadStateIcon(
+          downloadState = BookDownloadState.Downloaded,
+          size = 20.dp,
+          contentDescription = stringResource(R.string.library_item_downloaded_indicator),
+          modifier = Modifier.testTag("downloadedIndicator_${folder.id}"),
+        )
+      }
+
       Spacer(Modifier.width(16.dp))
 
       Icon(
@@ -142,7 +158,7 @@ fun FolderComposable(
                 book = book,
                 imageLoader = imageLoader,
                 navController = navController,
-                downloaded = book.id in downloadedIds,
+                downloadState = resolveDownloadState(book.id),
               )
             }
           }

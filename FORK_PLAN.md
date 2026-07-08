@@ -300,7 +300,15 @@ chapter change; search still filters; E2E tests updated and green.
 
 ---
 
-### WP-4 — Nav bar: one-tap download + active-state tints
+### WP-4 — Nav bar: one-tap download + active-state tints ✅ DONE 2026-07-08
+
+> Landed on `main`. `NavigationBarComposable` now drives the download item off
+> `downloadState(book.id)`: NotDownloaded tap → `cache(book, pos, AllItemsDownloadOption)`
+> (no sheet; disabled in force-cache), Downloading tap → `stopCaching`, Downloaded tap →
+> `AlertDialog` → `dropCache` + clear-playing-book + back to library. Speed item shows the
+> live speed (e.g. "1.25×") tinted primary when ≠ 1.0×; timer item tints primary when set.
+> `DownloadsComposable.kt` deleted; 7 orphaned sheet strings removed (`ChaptersCountStepper`
+> + `DownloadOption` machinery kept for auto-cache settings). Lint + unit tests + assembleDebug green.
 
 **Goal:** vault items 4, 7b, 8. The download button acts by state; active features
 tint their nav button `colorScheme.primary`.

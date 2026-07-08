@@ -126,9 +126,7 @@
     <string name="widget_placeholder_text">Click to open the app</string>
     <string name="the_offline_podcasts_is_empty">No saved podcasts yet</string>
     <string name="player_screen_downloads_navigation">Downloads</string>
-    <string name="downloads_menu_download_book">Download book</string>
     <string name="downloads_menu_download_podcast">Download podcast</string>
-    <string name="downloads_menu_download_unknown">Downloads</string>
     <string name="downloads_menu_download_option_disable">Disabled</string>
     <string name="downloads_menu_download_option_current_chapter">Current chapter</string>
     <string name="downloads_menu_download_option_current_episode">Current episode</string>
@@ -151,15 +149,13 @@
         <item quantity="one">Next %d item</item>
         <item quantity="other">Next %d items</item>
     </plurals>
-    <string name="downloads_menu_download_option_next_chapters_label">Next chapters</string>
     <string name="downloads_menu_download_option_next_episodes_label">Next episodes</string>
-    <string name="downloads_menu_download_option_next_items_label">Next items</string>
     <string name="downloads_menu_download_option_decrease">Decrease count</string>
     <string name="downloads_menu_download_option_increase">Increase count</string>
-    <string name="downloads_menu_download_option_clear_chapters">Clear downloaded chapters</string>
     <string name="downloads_menu_download_option_clear_episodes">Clear downloaded episodes</string>
-    <string name="downloads_menu_download_option_clear_items">Clear downloaded items</string>
-    <string name="downloads_menu_download_option_stop_downloads">Stop downloading</string>
+    <string name="player_screen_download_delete_title">Delete download</string>
+    <string name="player_screen_download_delete_message">Remove the downloaded files for this book from this device? Your server data is not affected.</string>
+    <string name="player_screen_download_delete_confirm">Delete</string>
     <string name="mini_player_action_close">Close</string>
     <string name="playing_item_details_author">Author</string>
     <string name="playing_item_details_publisher">Publisher</string>

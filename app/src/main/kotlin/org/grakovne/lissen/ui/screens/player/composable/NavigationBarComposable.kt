@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.SlowMotionVideo
 import androidx.compose.material.icons.outlined.Timer
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
@@ -14,6 +15,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -29,20 +31,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import org.grakovne.lissen.R
-import org.grakovne.lissen.content.cache.persistent.CacheState
+import org.grakovne.lissen.domain.AllItemsDownloadOption
 import org.grakovne.lissen.domain.BookDownloadState
-import org.grakovne.lissen.domain.CacheStatus
 import org.grakovne.lissen.domain.CurrentEpisodeTimerOption
 import org.grakovne.lissen.domain.DetailedItem
 import org.grakovne.lissen.domain.DurationTimerOption
 import org.grakovne.lissen.domain.LibraryType
-import org.grakovne.lissen.playback.service.calculateChapterIndex
 import org.grakovne.lissen.ui.components.DownloadStateIcon
 import org.grakovne.lissen.ui.extensions.formatTime
 import org.grakovne.lissen.ui.icons.TimerPlay
 import org.grakovne.lissen.ui.navigation.AppNavigationService
 import org.grakovne.lissen.viewmodel.CachingModelView
 import org.grakovne.lissen.viewmodel.PlayerViewModel
+import java.util.Locale
 
 @Composable
 fun NavigationBarComposable(
@@ -53,21 +54,24 @@ fun NavigationBarComposable(
   modifier: Modifier = Modifier,
   libraryType: LibraryType,
 ) {
-  val cacheProgress: CacheState by contentCachingModelView.getProgress(book.id).collectAsState()
+  val downloadState by contentCachingModelView
+    .downloadState(book.id)
+    .collectAsState(initial = BookDownloadState.NotDownloaded)
   val timerOption by playerViewModel.timerOption.collectAsState()
   val timerRemaining by playerViewModel.timerRemaining.collectAsState()
   val playbackSpeed by playerViewModel.playbackSpeed.collectAsState()
   val hasEpisodes = book.chapters.isNotEmpty()
-
-  val isMetadataCached by contentCachingModelView.provideCacheState(book.id).collectAsState(initial = false)
-  val totalPosition by playerViewModel.totalPosition.collectAsState()
-  val remainingChapters = (book.chapters.size - calculateChapterIndex(book, totalPosition)).coerceAtLeast(1)
+  val isForceCache = contentCachingModelView.localCacheUsing()
 
   var playbackSpeedExpanded by remember { mutableStateOf(false) }
   var timerExpanded by remember { mutableStateOf(false) }
-  var downloadsExpanded by remember { mutableStateOf(false) }
+  var showDeleteDialog by remember { mutableStateOf(false) }
 
   val scope = rememberCoroutineScope()
+
+  val downloadActive = downloadState !is BookDownloadState.NotDownloaded
+  val speedActive = playbackSpeed != 1.0f
+  val timerActive = timerOption != null
 
   Surface(
     shadowElevation = 4.dp,
@@ -83,13 +87,8 @@ fun NavigationBarComposable(
 
       NavigationBarItem(
         icon = {
-          val navBarDownloadState =
-            when (cacheProgress.status) {
-              is CacheStatus.Caching -> BookDownloadState.Downloading(cacheProgress.progress)
-              else -> BookDownloadState.NotDownloaded
-            }
           DownloadStateIcon(
-            downloadState = navBarDownloadState,
+            downloadState = downloadState,
             size = iconSize,
           )
         },
@@ -101,13 +100,34 @@ fun NavigationBarComposable(
             overflow = TextOverflow.Ellipsis,
           )
         },
-        enabled = hasEpisodes,
+        // Offline (force-cache) mode disables starting a new download, mirroring how the old
+        // sheet greyed out its download options — but stopping or deleting stays available.
+        enabled = hasEpisodes && !(downloadState is BookDownloadState.NotDownloaded && isForceCache),
         selected = false,
-        onClick = { downloadsExpanded = true },
+        onClick = {
+          when (downloadState) {
+            is BookDownloadState.NotDownloaded -> {
+              contentCachingModelView.cache(
+                mediaItem = book,
+                currentPosition = playerViewModel.totalPosition.value,
+                option = AllItemsDownloadOption,
+              )
+            }
+
+            is BookDownloadState.Downloading -> {
+              contentCachingModelView.stopCaching(book)
+            }
+
+            is BookDownloadState.Downloaded -> {
+              showDeleteDialog = true
+            }
+          }
+        },
         colors =
           NavigationBarItemDefaults.colors(
             selectedIconColor = colorScheme.primary,
             indicatorColor = colorScheme.surfaceContainer,
+            unselectedTextColor = if (downloadActive) colorScheme.primary else colorScheme.onSurfaceVariant,
           ),
       )
 
@@ -122,7 +142,11 @@ fun NavigationBarComposable(
         },
         label = {
           Text(
-            text = stringResource(R.string.player_screen_playback_speed_navigation),
+            text =
+              when (speedActive) {
+                true -> "${String.format(Locale.US, "%.2f", playbackSpeed).trimEnd('0').trimEnd('.')}×"
+                false -> stringResource(R.string.player_screen_playback_speed_navigation)
+              },
             style = labelStyle,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -134,6 +158,8 @@ fun NavigationBarComposable(
           NavigationBarItemDefaults.colors(
             selectedIconColor = colorScheme.primary,
             indicatorColor = colorScheme.surfaceContainer,
+            unselectedIconColor = if (speedActive) colorScheme.primary else colorScheme.onSurfaceVariant,
+            unselectedTextColor = if (speedActive) colorScheme.primary else colorScheme.onSurfaceVariant,
           ),
       )
 
@@ -180,6 +206,8 @@ fun NavigationBarComposable(
           NavigationBarItemDefaults.colors(
             selectedIconColor = colorScheme.primary,
             indicatorColor = colorScheme.surfaceContainer,
+            unselectedIconColor = if (timerActive) colorScheme.primary else colorScheme.onSurfaceVariant,
+            unselectedTextColor = if (timerActive) colorScheme.primary else colorScheme.onSurfaceVariant,
           ),
       )
 
@@ -200,49 +228,28 @@ fun NavigationBarComposable(
         )
       }
 
-      if (downloadsExpanded) {
-        DownloadsComposable(
-          libraryType = libraryType,
-          hasCachedEpisodes = isMetadataCached,
-          isForceCache = contentCachingModelView.localCacheUsing(),
-          cachingInProgress = cacheProgress.status is CacheStatus.Caching,
-          chaptersCount = contentCachingModelView.getDownloadChaptersCount(),
-          maxChaptersCount = remainingChapters,
-          onChaptersCountChanged = { contentCachingModelView.saveDownloadChaptersCount(it) },
-          onRequestedDownload = { option ->
-            playerViewModel.book.value?.let {
-              contentCachingModelView
-                .cache(
-                  mediaItem = it,
-                  currentPosition = playerViewModel.totalPosition.value,
-                  option = option,
-                )
+      if (showDeleteDialog) {
+        AlertDialog(
+          onDismissRequest = { showDeleteDialog = false },
+          title = { Text(stringResource(R.string.player_screen_download_delete_title)) },
+          text = { Text(stringResource(R.string.player_screen_download_delete_message)) },
+          confirmButton = {
+            TextButton(onClick = {
+              showDeleteDialog = false
+              scope.launch {
+                contentCachingModelView.dropCache(book.id)
+                playerViewModel.clearPlayingBook()
+                navController.showLibrary(true)
+              }
+            }) {
+              Text(stringResource(R.string.player_screen_download_delete_confirm))
             }
           },
-          onRequestedDrop = {
-            playerViewModel
-              .book
-              .value
-              ?.let {
-                scope.launch {
-                  contentCachingModelView.dropCache(it.id)
-
-                  playerViewModel.clearPlayingBook()
-                  navController.showLibrary(true)
-                }
-              }
+          dismissButton = {
+            TextButton(onClick = { showDeleteDialog = false }) {
+              Text(stringResource(R.string.library_folder_dialog_cancel))
+            }
           },
-          onRequestedStop = {
-            playerViewModel
-              .book
-              .value
-              ?.let {
-                scope.launch {
-                  contentCachingModelView.stopCaching(it)
-                }
-              }
-          },
-          onDismissRequest = { downloadsExpanded = false },
         )
       }
     }

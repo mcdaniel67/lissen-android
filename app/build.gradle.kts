@@ -78,6 +78,10 @@ android {
   lint {
     disable.add("MissingTranslation")
     disable.add("MissingQuantity")
+    // This fork keeps English (values/) as the source of truth and leaves the inherited
+    // upstream Weblate locale files (values-*/) frozen. Removing a string from English while
+    // it still exists in a locale is expected here, so ExtraTranslation must not be fatal.
+    disable.add("ExtraTranslation")
   }
   
   defaultConfig {

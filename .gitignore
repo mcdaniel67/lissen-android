@@ -33,3 +33,6 @@ google-services.json
 # Android Profiling
 *.hprof
 .aider*
+
+# Claude Code local worktrees / settings
+.claude/

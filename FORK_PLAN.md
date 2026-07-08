@@ -395,7 +395,20 @@ remaining option).
 
 ---
 
-### WP-6 — Server progress API (backbone for WP-7)
+### WP-6 — Server progress API (backbone for WP-7) ✅ DONE 2026-07-08
+
+> Landed on `main` (`b2e6d957`). API-only, no UI. Collapsed upstream's WIP
+> complete/uncomplete pair into one call: `LissenMediaProvider.markAsListened(itemId,
+> isFinished): OperationResult<Unit>` — **this is what WP-7 calls.** Chain:
+> `AudiobookshelfApiClient.updateListenedState` (`PATCH api/me/progress/{itemId}`,
+> `ChangeListenedStateRequest(isFinished)`) → `AudioBookshelfRepository` →
+> `MediaChannel`/`AudiobookshelfChannel`; on success also writes local
+> `CachedBookRepository.updateFinishedState` (preserves `currentTime`) so hide-completed
+> reflects offline. Under `isForceCache()` it skips the network and updates cache only.
+> Room untouched (v21, reuses `media_progress`). +8 unit tests, 772 green, assembleDebug OK.
+> Residual: live-ABS `isFinished` flip needs the homelab. Note for WP-7: a pre-existing
+> `runBlocking`-as-last-statement footgun silently skips 3 old `LissenMediaProviderTest`
+> cases — don't copy that shape.
 
 **Goal:** the app can mark a book finished/unfinished on the ABS server. Port the
 API layer from upstream's unmerged `feature/mark-as-completed` branch

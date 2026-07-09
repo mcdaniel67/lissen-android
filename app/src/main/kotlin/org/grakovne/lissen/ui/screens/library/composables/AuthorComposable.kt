@@ -1,6 +1,7 @@
 package org.grakovne.lissen.ui.screens.library.composables
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
+import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
 import kotlinx.coroutines.delay
 import org.grakovne.lissen.R
@@ -45,8 +47,8 @@ import org.grakovne.lissen.common.LibraryGrouping
 import org.grakovne.lissen.domain.Book
 import org.grakovne.lissen.domain.BookDownloadState
 import org.grakovne.lissen.domain.LibraryEntry
-import org.grakovne.lissen.ui.components.AsyncShimmeringImage
 import org.grakovne.lissen.ui.components.AuthorCoverKey
+import org.grakovne.lissen.ui.components.CollectionCoverImage
 import org.grakovne.lissen.ui.components.DownloadStateIcon
 import org.grakovne.lissen.ui.navigation.AppNavigationService
 
@@ -90,17 +92,44 @@ fun AuthorComposable(
           .padding(horizontal = 4.dp, vertical = 8.dp),
       verticalAlignment = Alignment.CenterVertically,
     ) {
-      AsyncShimmeringImage(
-        imageRequest = imageRequest,
+      val coverModifier =
+        Modifier
+          .size(LibraryItemCoverSize)
+          .aspectRatio(1f)
+          .clip(RoundedCornerShape(4.dp))
+      val coverItemIds = remember(books) { books.map { it.id } }
+
+      SubcomposeAsyncImage(
+        model = imageRequest,
         imageLoader = imageLoader,
         contentDescription = null,
         contentScale = ContentScale.FillBounds,
-        modifier =
-          Modifier
-            .size(LibraryItemCoverSize)
-            .aspectRatio(1f)
-            .clip(RoundedCornerShape(4.dp)),
-        error = painterResource(R.drawable.author_fallback),
+        modifier = coverModifier,
+        error = {
+          // No author portrait on the server: fall back to a mosaic of the author's book covers
+          // (available once the row's books have prefetched), else the generic author placeholder.
+          when {
+            coverItemIds.isNotEmpty() -> {
+              CollectionCoverImage(
+                collectionId = author.id,
+                coverItemIds = coverItemIds,
+                imageLoader = imageLoader,
+                error = painterResource(R.drawable.author_fallback),
+                contentDescription = null,
+                modifier = coverModifier,
+              )
+            }
+
+            else -> {
+              Image(
+                painter = painterResource(R.drawable.author_fallback),
+                contentDescription = null,
+                contentScale = ContentScale.FillBounds,
+                modifier = coverModifier,
+              )
+            }
+          }
+        },
       )
 
       Spacer(Modifier.width(16.dp))

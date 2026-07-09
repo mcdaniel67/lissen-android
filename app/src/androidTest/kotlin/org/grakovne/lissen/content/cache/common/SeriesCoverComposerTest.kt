@@ -20,7 +20,7 @@ class SeriesCoverComposerTest {
   private val composer = SeriesCoverComposer()
 
   @Test
-  fun stacksColoredCoversWithTheFirstOnTopAndTheLastPeekingOutAtTheCorner() {
+  fun threeCoversFillASquareWithAFullHeightLeftColumnAndTwoStackedOnTheRight() {
     val red = solidCoverFile("red.png", Color.RED)
     val green = solidCoverFile("green.png", Color.GREEN)
     val blue = solidCoverFile("blue.png", Color.BLUE)
@@ -30,11 +30,45 @@ class SeriesCoverComposerTest {
 
     val result = BitmapFactory.decodeStream(composed!!.inputStream())
 
-    assertEquals(119, result.width)
-    assertEquals(119, result.height)
+    assertEquals(100, result.width)
+    assertEquals(100, result.height)
 
-    assertEquals("topmost cover should be the first file", Color.RED, result.getPixel(50, 50))
-    assertEquals("last cover should peek out at the bottom-right corner", Color.BLUE, result.getPixel(114, 114))
+    assertEquals("left column is the first cover", Color.RED, result.getPixel(25, 50))
+    assertEquals("right-top is the second cover", Color.GREEN, result.getPixel(75, 25))
+    assertEquals("right-bottom is the third cover", Color.BLUE, result.getPixel(75, 75))
+  }
+
+  @Test
+  fun fourCoversTileIntoA2x2Grid() {
+    val red = solidCoverFile("red.png", Color.RED)
+    val green = solidCoverFile("green.png", Color.GREEN)
+    val blue = solidCoverFile("blue.png", Color.BLUE)
+    val yellow = solidCoverFile("yellow.png", Color.YELLOW)
+
+    val composed = composer.compose(listOf(red, green, blue, yellow))
+    assertNotNull(composed)
+
+    val result = BitmapFactory.decodeStream(composed!!.inputStream())
+
+    assertEquals(100, result.width)
+    assertEquals(100, result.height)
+
+    assertEquals("top-left quadrant", Color.RED, result.getPixel(25, 25))
+    assertEquals("top-right quadrant", Color.GREEN, result.getPixel(75, 25))
+    assertEquals("bottom-left quadrant", Color.BLUE, result.getPixel(25, 75))
+    assertEquals("bottom-right quadrant", Color.YELLOW, result.getPixel(75, 75))
+  }
+
+  @Test
+  fun caps_at_four_tiles_ignoring_extra_covers() {
+    val covers = (1..6).map { solidCoverFile("cover-$it.png", Color.RED) }
+
+    val composed = composer.compose(covers)
+    assertNotNull(composed)
+
+    val result = BitmapFactory.decodeStream(composed!!.inputStream())
+    assertEquals(100, result.width)
+    assertEquals(100, result.height)
   }
 
   private fun solidCoverFile(

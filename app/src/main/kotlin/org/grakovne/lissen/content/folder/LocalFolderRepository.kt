@@ -127,6 +127,6 @@ class LocalFolderRepository
       )
 
     companion object {
-      private const val COVER_ITEMS = 3
+      private const val COVER_ITEMS = 4
     }
   }

@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -37,6 +38,7 @@ import org.grakovne.lissen.R
 import org.grakovne.lissen.domain.Book
 import org.grakovne.lissen.domain.BookDownloadState
 import org.grakovne.lissen.domain.LibraryEntry
+import org.grakovne.lissen.ui.components.CollectionCoverImage
 import org.grakovne.lissen.ui.components.DownloadStateIcon
 import org.grakovne.lissen.ui.navigation.AppNavigationService
 
@@ -68,20 +70,38 @@ fun FolderComposable(
           .padding(horizontal = 4.dp, vertical = 8.dp),
       verticalAlignment = Alignment.CenterVertically,
     ) {
-      Box(
-        modifier =
-          Modifier
-            .size(LibraryItemCoverSize)
-            .clip(RoundedCornerShape(4.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-        contentAlignment = Alignment.Center,
-      ) {
-        Icon(
-          imageVector = Icons.Outlined.Folder,
-          contentDescription = null,
-          tint = MaterialTheme.colorScheme.onSurfaceVariant,
-          modifier = Modifier.size(28.dp),
-        )
+      when {
+        folder.coverItemIds.isEmpty() -> {
+          Box(
+            modifier =
+              Modifier
+                .size(LibraryItemCoverSize)
+                .clip(RoundedCornerShape(4.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+            contentAlignment = Alignment.Center,
+          ) {
+            Icon(
+              imageVector = Icons.Outlined.Folder,
+              contentDescription = null,
+              tint = MaterialTheme.colorScheme.onSurfaceVariant,
+              modifier = Modifier.size(28.dp),
+            )
+          }
+        }
+
+        else -> {
+          CollectionCoverImage(
+            collectionId = folder.id,
+            coverItemIds = folder.coverItemIds,
+            imageLoader = imageLoader,
+            error = painterResource(R.drawable.cover_fallback),
+            contentDescription = null,
+            modifier =
+              Modifier
+                .size(LibraryItemCoverSize)
+                .clip(RoundedCornerShape(4.dp)),
+          )
+        }
       }
 
       Spacer(Modifier.width(16.dp))

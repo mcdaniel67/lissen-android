@@ -100,6 +100,11 @@ class SeriesCoverProvider
     ): String =
       MessageDigest
         .getInstance("SHA-256")
-        .digest((seriesId + coverItemIds.joinToString(",")).toByteArray())
+        .digest(("$COMPOSITE_LAYOUT_VERSION:$seriesId:${coverItemIds.joinToString(",")}").toByteArray())
         .joinToString("") { "%02x".format(it) }
+
+    companion object {
+      // Bump to invalidate on-disk composites when the mosaic layout changes (e.g. fanned → 2×2 grid).
+      private const val COMPOSITE_LAYOUT_VERSION = "v2-grid"
+    }
   }

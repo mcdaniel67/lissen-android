@@ -98,7 +98,6 @@ class CachedBookEntityDetailedConverterTest {
     assertEquals(1, result.chapters.size)
     assertEquals("c1", result.chapters[0].id)
     assertTrue(result.chapters[0].available)
-    assertNull(result.chapters[0].podcastEpisodeState)
   }
 
   @Test

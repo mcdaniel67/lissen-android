@@ -16,7 +16,6 @@ class CalculateChapterPositionTest {
             add(
               PlayingChapter(
                 available = true,
-                podcastEpisodeState = null,
                 duration = duration.toDouble(),
                 start = start,
                 end = start + duration.toDouble(),

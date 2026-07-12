@@ -57,7 +57,6 @@ class CachedBookEntityDetailedConverter
               title = chapterEntity.title,
               available = chapterEntity.isCached,
               id = chapterEntity.bookChapterId,
-              podcastEpisodeState = null, // currently state is not available for local mode
             )
           },
         abstract = entity.detailedBook.abstract,

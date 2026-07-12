@@ -1,7 +1,6 @@
 package org.grakovne.lissen.content.cache.persistent
 
 import org.grakovne.lissen.domain.AllItemsDownloadOption
-import org.grakovne.lissen.domain.BookChapterState
 import org.grakovne.lissen.domain.CurrentItemDownloadOption
 import org.grakovne.lissen.domain.DetailedItem
 import org.grakovne.lissen.domain.NumberItemDownloadOption
@@ -39,7 +38,6 @@ class CalculateRequestedChaptersTest {
             end = (start + dur).also { start += dur },
             duration = dur,
             available = true,
-            podcastEpisodeState = BookChapterState.FINISHED,
           )
         },
     )

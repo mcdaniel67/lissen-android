@@ -33,7 +33,6 @@ class BookResponseConverter
               available = true,
               id = it.id,
               duration = it.end - it.start,
-              podcastEpisodeState = null,
             )
           }
 
@@ -51,7 +50,6 @@ class BookResponseConverter
                 title = file.metaTags?.tagTitle ?: file.metadata.filename.removeSuffix(file.metadata.ext),
                 duration = file.duration ?: 0.0,
                 id = file.ino,
-                podcastEpisodeState = null,
               ),
             )
             accDuration + (file.duration ?: 0.0) to chapters

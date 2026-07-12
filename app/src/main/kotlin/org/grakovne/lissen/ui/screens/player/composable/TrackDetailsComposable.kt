@@ -1,32 +1,14 @@
 package org.grakovne.lissen.ui.screens.player.composable
 
 import android.content.Context
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme.colorScheme
-import androidx.compose.material3.MaterialTheme.typography
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
 import coil3.request.ImageRequest
@@ -35,8 +17,6 @@ import org.grakovne.lissen.domain.DetailedItem
 import org.grakovne.lissen.domain.LibraryType
 import org.grakovne.lissen.ui.components.AsyncShimmeringImage
 import org.grakovne.lissen.ui.components.BookCoverKey
-import org.grakovne.lissen.viewmodel.LibraryViewModel
-import org.grakovne.lissen.viewmodel.PlayerViewModel
 
 @Composable
 fun BookCover(
@@ -63,91 +43,6 @@ fun BookCover(
     modifier = modifier.clip(RoundedCornerShape(8.dp)),
     error = painterResource(R.drawable.cover_fallback),
   )
-}
-
-@Composable
-fun TrackDetailsComposable(
-  libraryViewModel: LibraryViewModel,
-  viewModel: PlayerViewModel,
-  modifier: Modifier = Modifier,
-  imageLoader: ImageLoader,
-) {
-  val currentTrackIndex by viewModel.currentChapterIndex.collectAsState()
-  val book by viewModel.book.collectAsState()
-
-  val context = LocalContext.current
-
-  val configuration = LocalConfiguration.current
-  val maxImageHeight = configuration.screenHeightDp.dp * 0.33f
-
-  Column(
-    horizontalAlignment = Alignment.CenterHorizontally,
-    modifier = modifier,
-  ) {
-    BookCover(
-      book = book,
-      imageLoader = imageLoader,
-      modifier =
-        Modifier
-          .heightIn(max = maxImageHeight)
-          .aspectRatio(1f),
-    )
-
-    Spacer(modifier = Modifier.height(12.dp))
-
-    Text(
-      text = book?.title.orEmpty(),
-      style = typography.headlineSmall,
-      fontWeight = FontWeight.SemiBold,
-      color = colorScheme.onBackground,
-      textAlign = TextAlign.Center,
-      overflow = TextOverflow.Ellipsis,
-      maxLines = 2,
-      modifier =
-        Modifier
-          .fillMaxWidth()
-          .padding(horizontal = 16.dp),
-    )
-
-    Spacer(modifier = Modifier.height(2.dp))
-
-    book
-      ?.subtitle
-      ?.takeIf { it.isNotBlank() }
-      ?.let {
-        Text(
-          text = it,
-          style = typography.bodyMedium,
-          color = colorScheme.onBackground.copy(alpha = 0.6f),
-          textAlign = TextAlign.Center,
-          overflow = TextOverflow.Ellipsis,
-          maxLines = 1,
-          modifier =
-            Modifier
-              .fillMaxWidth()
-              .padding(horizontal = 16.dp),
-        )
-
-        Spacer(modifier = Modifier.height(2.dp))
-      }
-
-    Text(
-      text =
-        provideChapterNumberTitle(
-          currentTrackIndex = currentTrackIndex,
-          book = book,
-          libraryType = libraryViewModel.fetchPreferredLibraryType(),
-          context = context,
-        ),
-      style = typography.bodyMedium,
-      color = colorScheme.onBackground.copy(alpha = 0.6f),
-      textAlign = TextAlign.Center,
-      modifier =
-        Modifier
-          .fillMaxWidth()
-          .testTag("playerChapterNumber"),
-    )
-  }
 }
 
 fun provideChapterNumberTitle(

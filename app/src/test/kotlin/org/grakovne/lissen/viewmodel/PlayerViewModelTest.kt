@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
-import org.grakovne.lissen.domain.BookChapterState
 import org.grakovne.lissen.domain.Bookmark
 import org.grakovne.lissen.domain.DetailedItem
 import org.grakovne.lissen.domain.DurationTimerOption
@@ -209,7 +208,6 @@ class PlayerViewModelTest {
     end = 100.0,
     duration = 100.0,
     available = available,
-    podcastEpisodeState = BookChapterState.FINISHED,
   )
 
   @Nested

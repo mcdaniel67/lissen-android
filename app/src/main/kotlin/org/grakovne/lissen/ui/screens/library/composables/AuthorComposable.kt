@@ -74,10 +74,10 @@ fun AuthorComposable(
   }
 
   val imageRequest =
-    remember(author.id) {
+    remember(author.id, author.name) {
       ImageRequest
         .Builder(context)
-        .data(AuthorCoverKey(author.id))
+        .data(AuthorCoverKey(author.id, author.name))
         .build()
     }
 

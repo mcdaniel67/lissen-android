@@ -7,6 +7,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import okio.Buffer
 import org.grakovne.lissen.channel.common.OperationError
 import org.grakovne.lissen.channel.common.OperationResult
 import org.grakovne.lissen.content.LissenMediaProvider
@@ -52,7 +53,20 @@ class SeriesCoverProvider
 
     private suspend fun fetchCached(key: String): File? =
       withContext(Dispatchers.IO) {
-        properties.provideSeriesCoverPath(key).takeIf { it.exists() }
+        properties
+          .provideSeriesCoverPath(key)
+          .let { cached ->
+            when {
+              cached.isFile && cached.length() > 0L -> {
+                cached
+              }
+
+              else -> {
+                cached.delete()
+                null
+              }
+            }
+          }
       }
 
     private suspend fun cache(
@@ -78,19 +92,29 @@ class SeriesCoverProvider
         val dest = properties.provideSeriesCoverPath(key)
         dest.parentFile?.mkdirs()
 
-        when {
-          covers.size == coverItemIds.size -> {
-            composed.writeToFile(dest)
-            OperationResult.Success(dest)
-          }
-
-          else -> {
-            Timber.w("Composed partial series cover for $key (${covers.size}/${coverItemIds.size}), skipping persistent cache")
-            val temp = File.createTempFile("series_cover_", null, dest.parentFile)
-            composed.writeToFile(temp)
-            OperationResult.Success(temp)
-          }
+        if (covers.size != coverItemIds.size) {
+          Timber.w("Caching partial series cover for $key (${covers.size}/${coverItemIds.size})")
         }
+
+        persist(composed, dest)
+      }
+    }
+
+    private fun persist(
+      composed: Buffer,
+      dest: File,
+    ): OperationResult<File> {
+      val temp = File.createTempFile("${dest.name}.", ".tmp", dest.parentFile)
+
+      return try {
+        composed.writeToFile(temp)
+        check(temp.renameTo(dest)) { "Unable to move composed cover into cache" }
+        OperationResult.Success(dest)
+      } catch (ex: Exception) {
+        Timber.e(ex, "Unable to cache composed cover ${dest.name}")
+        OperationResult.Error(OperationError.InternalError, ex.message)
+      } finally {
+        temp.delete()
       }
     }
 

@@ -1,6 +1,7 @@
 package org.grakovne.lissen.content.cache.persistent
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flow
@@ -204,11 +205,13 @@ class ContentCachingManager
         CacheState(CacheStatus.Completed)
       }
 
-    private suspend fun cacheBookCover(
+    @VisibleForTesting
+    internal suspend fun cacheBookCover(
       book: DetailedItem,
       channel: MediaChannel,
     ): CacheState {
       val file = properties.provideBookCoverPath(book.id)
+      val tempFile = File(file.parent, "${file.name}.tmp")
 
       return withContext(Dispatchers.IO) {
         channel
@@ -216,19 +219,27 @@ class ContentCachingManager
           .fold(
             onSuccess = { cover ->
               try {
+                file.parentFile?.mkdirs()
                 cover
                   .withBlur(context)
-                  .writeToFile(file)
+                  .writeToFile(tempFile)
+
+                when (tempFile.renameTo(file)) {
+                  true -> CacheState(CacheStatus.Completed)
+                  false -> CacheState(CacheStatus.Error)
+                }
               } catch (ex: Exception) {
                 Timber.e("Unable to cache cover for ${book.id} due to: ${ex.message}")
-                return@fold CacheState(CacheStatus.Error)
+                CacheState(CacheStatus.Error)
+              } finally {
+                tempFile.delete()
               }
             },
-            onFailure = {
+            onFailure = { error ->
+              Timber.e("Unable to fetch cover for ${book.id} due to: ${error.message}")
+              CacheState(CacheStatus.Error)
             },
           )
-
-        CacheState(CacheStatus.Completed)
       }
     }
 

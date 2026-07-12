@@ -25,7 +25,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -96,19 +95,6 @@ class LibraryViewModelTest {
 
   @Nested
   inner class PreferredLibrary {
-    @Test
-    fun `fetchPreferredLibraryTitle returns null when no library set`() {
-      every { preferences.getPreferredLibrary() } returns null
-      assertNull(viewModel.fetchPreferredLibraryTitle())
-    }
-
-    @Test
-    fun `fetchPreferredLibraryTitle returns library title when library exists`() {
-      val library = Library(id = "lib-1", title = "My Library", type = LibraryType.LIBRARY)
-      every { preferences.getPreferredLibrary() } returns library
-      assertEquals("My Library", viewModel.fetchPreferredLibraryTitle())
-    }
-
     @Test
     fun `fetchPreferredLibraryType returns UNKNOWN when no library set`() {
       every { preferences.getPreferredLibrary() } returns null
@@ -213,6 +199,19 @@ class LibraryViewModelTest {
       viewModel.toggleGroup(series())
 
       assertEquals(listOf("1", "2", "22"), viewModel.groupBooks.value["ser-1"]?.map { it.id })
+    }
+
+    @Test
+    fun `downloaded first preserves provider partitioned series order`() {
+      every { preferences.getPreferredLibrary() } returns library
+      every { preferences.getDownloadedFirst() } returns true
+      every { preferences.isForceCache() } returns false
+      coEvery { mediaChannel.fetchSeriesItems("lib-1", "ser-1") } returns
+        OperationResult.Success(listOf(seqBook("22"), seqBook("1"), seqBook("2")))
+
+      viewModel.toggleGroup(series())
+
+      assertEquals(listOf("22", "1", "2"), viewModel.groupBooks.value["ser-1"]?.map { it.id })
     }
 
     @Test

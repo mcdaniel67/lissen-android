@@ -2,22 +2,17 @@ package org.grakovne.lissen.ui.screens.library.composables
 
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
@@ -28,7 +23,6 @@ import androidx.compose.material.icons.outlined.ArrowDownward
 import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.DownloadForOffline
 import androidx.compose.material.icons.outlined.ExpandLess
@@ -47,9 +41,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -58,13 +50,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import org.grakovne.lissen.R
@@ -78,16 +71,14 @@ import org.grakovne.lissen.domain.LibraryType
 import org.grakovne.lissen.ui.components.LissenModalBottomSheet
 import org.grakovne.lissen.ui.components.LissenToggle
 import org.grakovne.lissen.ui.navigation.AppNavigationService
-import org.grakovne.lissen.viewmodel.CachingModelView
 import org.grakovne.lissen.viewmodel.LibraryViewModel
 import org.grakovne.lissen.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuickSettingsComposable(
-  cachingModelView: CachingModelView = hiltViewModel(),
   onDismissRequest: () -> Unit,
-  onForceLocalToggled: () -> Unit,
+  onLibrarySwitchRequested: () -> Unit,
   onHideCompletedToggled: () -> Unit,
   onGroupingSelected: (LibraryGrouping) -> Unit,
   onSortingChanged: () -> Unit,
@@ -95,11 +86,12 @@ fun QuickSettingsComposable(
   settingsModelView: SettingsViewModel = hiltViewModel(),
   libraryViewModel: LibraryViewModel = hiltViewModel(),
 ) {
-  val forceCache by cachingModelView.forceCache.collectAsState(false)
   val hideCompleted by settingsModelView.hideCompleted.collectAsState(false)
   val grouping by settingsModelView.libraryGrouping.collectAsState(LibraryGrouping.NONE)
   val downloadedFirst by settingsModelView.downloadedFirst.collectAsState(false)
   val ordering by settingsModelView.preferredLibraryOrdering.collectAsState()
+  val libraries by settingsModelView.libraries.collectAsState()
+  val preferredLibrary by settingsModelView.preferredLibrary.collectAsState()
   val context = LocalContext.current
   val view = LocalView.current
   val isLibrary = libraryViewModel.fetchPreferredLibraryType() == LibraryType.LIBRARY
@@ -119,12 +111,19 @@ fun QuickSettingsComposable(
           .fillMaxWidth()
           .verticalScroll(rememberScrollState()),
     ) {
-      ToggleRow(
-        title = stringResource(R.string.show_downloaded_content_only),
-        icon = Icons.Outlined.CloudOff,
-        checked = forceCache,
-        onClick = { onForceLocalToggled() },
-      )
+      if (libraries.size > 1) {
+        preferredLibrary?.let { library ->
+          LibraryPickerRow(
+            libraryTitle = library.title,
+            onClick = onLibrarySwitchRequested,
+          )
+
+          HorizontalDivider(
+            thickness = 1.dp,
+            modifier = Modifier.padding(horizontal = 8.dp),
+          )
+        }
+      }
 
       ToggleRow(
         title = stringResource(R.string.hide_completed_items),
@@ -134,12 +133,11 @@ fun QuickSettingsComposable(
         onClick = { onHideCompletedToggled() },
       )
 
-      val downloadedFirstAvailable = isLibrary && grouping == LibraryGrouping.NONE
       ToggleRow(
         title = stringResource(R.string.library_downloaded_first),
         icon = Icons.Outlined.DownloadForOffline,
-        checked = downloadedFirstAvailable && downloadedFirst,
-        enabled = downloadedFirstAvailable,
+        checked = downloadedFirst,
+        enabled = isLibrary,
         onClick = {
           settingsModelView.toggleDownloadedFirst()
           onSortingChanged()
@@ -256,17 +254,53 @@ fun QuickSettingsComposable(
 }
 
 @Composable
-private fun SectionHeader(title: String) {
-  Text(
-    text = title,
-    style = typography.labelMedium,
-    color = colorScheme.onSurfaceVariant,
-    modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp),
-  )
+private fun LibraryPickerRow(
+  libraryTitle: String,
+  onClick: () -> Unit,
+) {
+  val view = LocalView.current
+  Row(
+    modifier =
+      Modifier
+        .fillMaxWidth()
+        .clickable { withHaptic(view) { onClick() } }
+        .padding(horizontal = 16.dp, vertical = 14.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Icon(
+      imageVector = Icons.Outlined.CollectionsBookmark,
+      contentDescription = null,
+      modifier = Modifier.size(20.dp),
+      tint = colorScheme.onSurface,
+    )
+    Spacer(modifier = Modifier.width(12.dp))
+    Text(
+      text = stringResource(R.string.library_screen_library_title),
+      style = typography.bodyLarge,
+      color = colorScheme.onSurface,
+      maxLines = 1,
+    )
+    Spacer(modifier = Modifier.width(12.dp))
+    Text(
+      text = libraryTitle,
+      style = typography.bodyMedium,
+      color = colorScheme.onSurfaceVariant,
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis,
+      modifier = Modifier.weight(1f),
+    )
+    Spacer(modifier = Modifier.width(4.dp))
+    Icon(
+      imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
+      contentDescription = null,
+      modifier = Modifier.size(16.dp),
+      tint = colorScheme.onSurfaceVariant,
+    )
+  }
 }
 
 @Composable
-private fun ToggleRow(
+internal fun ToggleRow(
   title: String,
   icon: ImageVector,
   checked: Boolean,
@@ -279,8 +313,12 @@ private fun ToggleRow(
     modifier =
       Modifier
         .fillMaxWidth()
-        .then(if (enabled) Modifier.clickable { withHaptic(view) { onClick() } } else Modifier)
-        .padding(horizontal = 16.dp, vertical = 10.dp),
+        .toggleable(
+          value = checked,
+          enabled = enabled,
+          role = Role.Switch,
+          onValueChange = { withHaptic(view) { onClick() } },
+        ).padding(horizontal = 16.dp, vertical = 10.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
     Icon(
@@ -296,7 +334,11 @@ private fun ToggleRow(
       color = contentColor,
       modifier = Modifier.weight(1f),
     )
-    LissenToggle(checked = checked, enabled = enabled)
+    LissenToggle(
+      checked = checked,
+      enabled = enabled,
+      modifier = Modifier.clearAndSetSemantics { },
+    )
   }
 }
 

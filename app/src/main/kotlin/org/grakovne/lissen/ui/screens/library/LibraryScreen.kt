@@ -12,7 +12,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -70,7 +69,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -91,7 +89,6 @@ import org.grakovne.lissen.common.LibraryOrderingConfiguration
 import org.grakovne.lissen.common.NetworkService
 import org.grakovne.lissen.common.withHaptic
 import org.grakovne.lissen.domain.LibraryEntry
-import org.grakovne.lissen.domain.LibraryType
 import org.grakovne.lissen.domain.RecentBook
 import org.grakovne.lissen.ui.components.withScrollbar
 import org.grakovne.lissen.ui.extensions.withMinimumTime
@@ -103,7 +100,7 @@ import org.grakovne.lissen.ui.screens.library.composables.BookComposable
 import org.grakovne.lissen.ui.screens.library.composables.DefaultActionComposable
 import org.grakovne.lissen.ui.screens.library.composables.FolderComposable
 import org.grakovne.lissen.ui.screens.library.composables.LibrarySearchActionComposable
-import org.grakovne.lissen.ui.screens.library.composables.LibrarySwitchComposable
+import org.grakovne.lissen.ui.screens.library.composables.LibraryTabsComposable
 import org.grakovne.lissen.ui.screens.library.composables.MiniPlayerComposable
 import org.grakovne.lissen.ui.screens.library.composables.QuickSettingsComposable
 import org.grakovne.lissen.ui.screens.library.composables.RecentBooksComposable
@@ -156,6 +153,7 @@ fun LibraryScreen(
   val selectionActive by libraryViewModel.selectionActive.collectAsState()
   val selectedBookIds by libraryViewModel.selectedBookIds.collectAsState()
   val downloadedIds by cachingModelView.cachedBookIds.collectAsState()
+  val downloadsOnly by cachingModelView.forceCache.collectAsState(false)
   val runningDownloads by cachingModelView.runningDownloads.collectAsState()
   val resolveDownloadState = { bookId: String -> cachingModelView.downloadStateOf(bookId, downloadedIds, runningDownloads) }
   val folders by libraryViewModel.folders.collectAsState()
@@ -243,9 +241,6 @@ fun LibraryScreen(
       },
     )
 
-  val titleTextStyle = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
-  val titleHeightDp = with(LocalDensity.current) { titleTextStyle.lineHeight.toPx().toDp() }
-
   val playingBook by playerViewModel.book.collectAsState()
   val context = LocalContext.current
 
@@ -257,6 +252,13 @@ fun LibraryScreen(
           context.getString(R.string.library_selection_mark_finished_error, failures),
           Toast.LENGTH_LONG,
         ).show()
+    }
+  }
+
+  LaunchedEffect(downloadedIds) {
+    if (downloadsOnly) {
+      libraryViewModel.refreshLibrary()
+      libraryViewModel.refreshRecentListening()
     }
   }
 
@@ -292,38 +294,16 @@ fun LibraryScreen(
     }
   }
 
-  fun provideLibraryTitle(): String {
-    val type = libraryViewModel.fetchPreferredLibraryType()
-
-    return when (type) {
-      LibraryType.LIBRARY -> {
-        libraryViewModel
-          .fetchPreferredLibraryTitle()
-          ?: context.getString(R.string.library_screen_library_title)
-      }
-
-      else -> {
-        ""
-      }
-    }
-  }
-
-  val libraryTitle = remember(preferredLibrary) { provideLibraryTitle() }
   val recentVisible by remember { derivedStateOf { isRecentVisible() } }
 
-  val navBarTitle by remember(libraryTitle) {
-    derivedStateOf {
-      val recentBlockVisible =
-        libraryListState.layoutInfo.visibleItemsInfo
-          .firstOrNull()
-          ?.key == "recent_books"
+  fun selectDownloadsOnly(enabled: Boolean) {
+    if (enabled == cachingModelView.localCacheUsing()) return
 
-      when {
-        isPlaceholderRequired -> context.getString(R.string.library_screen_continue_listening_title)
-        recentVisible && recentBlockVisible -> context.getString(R.string.library_screen_continue_listening_title)
-        else -> libraryTitle
-      }
-    }
+    cachingModelView.setForceCache(enabled)
+    playerViewModel.book.value?.let { playerViewModel.preparePlayback(it.id) }
+    libraryViewModel.resetGroupExpansion()
+    refreshContent(showPullRefreshing = false)
+    coroutineScope.launch { libraryListState.scrollToItem(0) }
   }
 
   Scaffold(
@@ -341,77 +321,53 @@ fun LibraryScreen(
           onCreateFolder = { showCreateFolder = true },
         )
       } else {
-        TopAppBar(
-          actions = {
-            AnimatedContent(
-              targetState = searchRequested,
-              label = "library_action_animation",
-              transitionSpec = {
-                fadeIn(animationSpec = keyframes { durationMillis = 150 }) togetherWith
-                  fadeOut(animationSpec = keyframes { durationMillis = 150 })
-              },
-            ) { isSearchRequested ->
-              when (isSearchRequested) {
-                true -> {
-                  LibrarySearchActionComposable(
-                    currentSearchToken = searchToken,
-                    autoFocus = linkedSearchToken == null,
-                    onSearchDismissed = {
-                      when (linkedSearchToken) {
-                        null -> libraryViewModel.dismissSearch()
-                        else -> navController.goBack()
-                      }
-                    },
-                    onSearchRequested = { libraryViewModel.updateSearch(it) },
-                  )
-                }
+        Column {
+          TopAppBar(
+            actions = {
+              AnimatedContent(
+                targetState = searchRequested,
+                label = "library_action_animation",
+                transitionSpec = {
+                  fadeIn(animationSpec = keyframes { durationMillis = 150 }) togetherWith
+                    fadeOut(animationSpec = keyframes { durationMillis = 150 })
+                },
+              ) { isSearchRequested ->
+                when (isSearchRequested) {
+                  true -> {
+                    LibrarySearchActionComposable(
+                      currentSearchToken = searchToken,
+                      autoFocus = linkedSearchToken == null,
+                      onSearchDismissed = {
+                        when (linkedSearchToken) {
+                          null -> libraryViewModel.dismissSearch()
+                          else -> navController.goBack()
+                        }
+                      },
+                      onSearchRequested = { libraryViewModel.updateSearch(it) },
+                    )
+                  }
 
-                false -> {
-                  DefaultActionComposable(
-                    onSearchRequested = { libraryViewModel.requestSearch() },
-                    onPreferencesRequested = { preferencesExpanded = true },
-                  )
-                }
-              }
-            }
-          },
-          title = {
-            if (!searchRequested) {
-              Row(
-                modifier =
-                  when (navBarTitle) {
-                    libraryTitle -> {
-                      Modifier
-                        .clickable(
-                          interactionSource = remember { MutableInteractionSource() },
-                          indication = null,
-                        ) { preferredLibraryExpanded = true }
-                        .fillMaxWidth()
-                    }
-
-                    else -> {
-                      Modifier.fillMaxWidth()
-                    }
-                  },
-              ) {
-                Text(
-                  text = navBarTitle,
-                  style = titleTextStyle,
-                  maxLines = 1,
-                  modifier =
-                    Modifier
-                      .testTag("libraryNavBarTitle")
-                      .semantics { heading() },
-                )
-
-                if (navBarTitle == libraryTitle) {
-                  LibrarySwitchComposable { preferredLibraryExpanded = true }
+                  false -> {
+                    DefaultActionComposable(
+                      onSearchRequested = { libraryViewModel.requestSearch() },
+                      onPreferencesRequested = { preferencesExpanded = true },
+                    )
+                  }
                 }
               }
-            }
-          },
-          modifier = Modifier.systemBarsPadding(),
-        )
+            },
+            title = {},
+            modifier = Modifier.systemBarsPadding(),
+          )
+
+          if (!searchRequested) {
+            LibraryTabsComposable(
+              downloadsOnly = downloadsOnly,
+              onDownloadsOnlyChanged = ::selectDownloadsOnly,
+              modifier = Modifier.fillMaxWidth(),
+            )
+          }
+        }
       }
     },
     bottomBar = {
@@ -464,7 +420,7 @@ fun LibraryScreen(
                 state = libraryListState,
                 color = colorScheme.onBackground.copy(alpha = scrollbarAlpha),
                 totalItems = libraryCount,
-                ignoreItems = listOf("recent_books", "library_title"),
+                ignoreItems = listOf("recent_books"),
               ),
           contentPadding = PaddingValues(horizontal = 16.dp),
           horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -483,6 +439,15 @@ fun LibraryScreen(
                 }
 
                 showRecent -> {
+                  Text(
+                    text = stringResource(R.string.library_screen_continue_listening_title),
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                    modifier =
+                      Modifier
+                        .padding(vertical = 8.dp)
+                        .semantics { heading() },
+                  )
+
                   RecentBooksComposable(
                     navController = navController,
                     recentBooks = recentBooks,
@@ -497,63 +462,7 @@ fun LibraryScreen(
             }
           }
 
-          item(key = "library_title", span = { GridItemSpan(maxLineSpan) }) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-              if (!searchRequested && recentVisible && isPlaceholderRequired.not()) {
-                AnimatedContent(
-                  targetState = navBarTitle,
-                  transitionSpec = {
-                    fadeIn(
-                      animationSpec =
-                        tween(300),
-                    ) togetherWith
-                      fadeOut(
-                        animationSpec =
-                          tween(
-                            300,
-                          ),
-                      )
-                  },
-                  label = "library_header_fade",
-                ) {
-                  when {
-                    it == libraryTitle -> {
-                      Spacer(
-                        modifier =
-                          Modifier
-                            .fillMaxWidth()
-                            .height(titleHeightDp),
-                      )
-                    }
-
-                    else -> {
-                      Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier =
-                          Modifier
-                            .clickable(
-                              interactionSource = remember { MutableInteractionSource() },
-                              indication = null,
-                            ) { preferredLibraryExpanded = true }
-                            .fillMaxWidth(),
-                      ) {
-                        Text(
-                          style = titleTextStyle,
-                          text = libraryTitle,
-                        )
-
-                        LibrarySwitchComposable { preferredLibraryExpanded = true }
-                      }
-                    }
-                  }
-                }
-              }
-
-              Spacer(modifier = Modifier.height(8.dp))
-            }
-          }
-
-          if (!searchRequested && !isPlaceholderRequired && folders.isNotEmpty()) {
+          if (!searchRequested && !downloadsOnly && !isPlaceholderRequired && folders.isNotEmpty()) {
             items(count = folders.size, key = { "folder_${folders[it].id}" }) { index ->
               val folder = folders[index]
               FolderComposable(
@@ -632,7 +541,7 @@ fun LibraryScreen(
                   }
 
                   is LibraryEntry.FolderEntry -> {
-                    Unit
+                    return@items
                   }
                 }
               }
@@ -673,12 +582,9 @@ fun LibraryScreen(
     QuickSettingsComposable(
       navController = navController,
       onDismissRequest = { preferencesExpanded = false },
-      onForceLocalToggled = {
-        cachingModelView.toggleCacheForce()
-        playerViewModel.book.value?.let { playerViewModel.preparePlayback(it.id) }
-        libraryViewModel.resetGroupExpansion()
-        refreshContent(showPullRefreshing = false)
-        coroutineScope.launch { libraryListState.scrollToItem(0) }
+      onLibrarySwitchRequested = {
+        preferencesExpanded = false
+        preferredLibraryExpanded = true
       },
       onHideCompletedToggled = {
         settingsViewModel.toggleHideCompleted()

@@ -6,8 +6,11 @@ import io.mockk.mockk
 import org.grakovne.lissen.domain.DetailedItem
 import org.grakovne.lissen.domain.Library
 import org.grakovne.lissen.domain.LibraryType
+import org.grakovne.lissen.domain.PlayingChapter
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.util.concurrent.CountDownLatch
 import kotlin.concurrent.thread
@@ -67,6 +70,36 @@ class PlayingItemPersistenceTest {
 
     preferences.clearPlayingItem()
     assertNull(preferences.getPlayingItem())
+  }
+
+  @Test
+  fun `playing item with legacy podcast episode state keeps its chapters`() {
+    val chapter =
+      PlayingChapter(
+        available = true,
+        duration = 60.0,
+        start = 0.0,
+        end = 60.0,
+        title = "Chapter 1",
+        id = "chapter-1",
+      )
+
+    preferLibrary("lib-1")
+    preferences.savePlayingItem(item(id = "book-1", libraryId = "lib-1").copy(chapters = listOf(chapter)))
+
+    val stored = checkNotNull(fakePreferences.getString("playing_item", null))
+    val legacyStored =
+      stored.replaceFirst(
+        "\"chapters\":[{",
+        "\"chapters\":[{\"podcastEpisodeState\":\"FINISHED\",",
+      )
+    assertNotEquals(stored, legacyStored, "Legacy field injection must change the persisted JSON")
+    assertTrue(legacyStored.contains("\"podcastEpisodeState\":\"FINISHED\""))
+    fakePreferences.edit().putString("playing_item", legacyStored).apply()
+
+    val reparsedPreferences = LissenSharedPreferences(context)
+
+    assertEquals(listOf(chapter), reparsedPreferences.getPlayingItem()?.chapters)
   }
 
   @Test

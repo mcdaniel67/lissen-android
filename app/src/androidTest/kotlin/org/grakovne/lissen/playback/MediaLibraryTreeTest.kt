@@ -387,7 +387,6 @@ class MediaLibraryTreeTest {
       listOf(
         PlayingChapter(
           available = true,
-          podcastEpisodeState = null,
           duration = 100.0,
           start = 0.0,
           end = 100.0,

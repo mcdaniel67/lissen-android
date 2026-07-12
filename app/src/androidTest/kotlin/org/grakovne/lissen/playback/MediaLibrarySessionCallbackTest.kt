@@ -234,7 +234,6 @@ class MediaLibrarySessionCallbackTest {
       listOf(
         PlayingChapter(
           available = true,
-          podcastEpisodeState = null,
           duration = 150.0,
           start = 0.0,
           end = 150.0,
@@ -243,7 +242,6 @@ class MediaLibrarySessionCallbackTest {
         ),
         PlayingChapter(
           available = true,
-          podcastEpisodeState = null,
           duration = 150.0,
           start = 150.0,
           end = 300.0,

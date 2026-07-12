@@ -40,6 +40,13 @@ private val bookItemMatcher =
       ?.startsWith("bookItem_") == true
   }
 
+private val recentBookItemMatcher =
+  SemanticsMatcher("hasRecentBookItemTag") { node ->
+    node.config
+      .getOrElseNullable(SemanticsProperties.TestTag) { null }
+      ?.startsWith("recentBookItem_") == true
+  }
+
 @OptIn(ExperimentalTestApi::class)
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
@@ -100,12 +107,19 @@ class LandscapeE2ETest {
   }
 
   private fun openFirstBook() {
-    composeRule.waitUntilAtLeastOneExists(
-      matcher = bookItemMatcher,
-      timeoutMillis = TIMEOUT_MS,
-    )
+    // The tabs and Continue Listening row can fill the landscape viewport, leaving the lazy main
+    // library rows uncomposed. A recent card is still a real book and is the stable first target.
+    composeRule.waitUntil(TIMEOUT_MS) {
+      composeRule.onAllNodes(recentBookItemMatcher).fetchSemanticsNodes().isNotEmpty() ||
+        composeRule.onAllNodes(bookItemMatcher).fetchSemanticsNodes().isNotEmpty()
+    }
 
-    composeRule.onAllNodes(bookItemMatcher)[0].performClick()
+    val matcher =
+      when {
+        composeRule.onAllNodes(recentBookItemMatcher).fetchSemanticsNodes().isNotEmpty() -> recentBookItemMatcher
+        else -> bookItemMatcher
+      }
+    composeRule.onAllNodes(matcher)[0].performClick()
 
     composeRule.waitUntilAtLeastOneExists(
       matcher = hasTestTag("playerScreen"),

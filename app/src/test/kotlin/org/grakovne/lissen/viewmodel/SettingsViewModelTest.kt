@@ -101,6 +101,27 @@ class SettingsViewModelTest {
   }
 
   @Nested
+  inner class DownloadedFirstPreference {
+    @Test
+    fun `toggleDownloadedFirst persists enabled when currently disabled`() {
+      every { preferences.getDownloadedFirst() } returns false
+
+      viewModel.toggleDownloadedFirst()
+
+      verify(exactly = 1) { preferences.saveDownloadedFirst(true) }
+    }
+
+    @Test
+    fun `toggleDownloadedFirst persists disabled when currently enabled`() {
+      every { preferences.getDownloadedFirst() } returns true
+
+      viewModel.toggleDownloadedFirst()
+
+      verify(exactly = 1) { preferences.saveDownloadedFirst(false) }
+    }
+  }
+
+  @Nested
   inner class ColorSchemePreference {
     @Test
     fun `preferColorScheme updates StateFlow`() {

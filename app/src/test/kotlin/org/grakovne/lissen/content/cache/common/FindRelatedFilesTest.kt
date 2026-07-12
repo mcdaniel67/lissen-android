@@ -1,6 +1,5 @@
 package org.grakovne.lissen.content.cache.common
 
-import org.grakovne.lissen.domain.BookChapterState
 import org.grakovne.lissen.domain.BookFile
 import org.grakovne.lissen.domain.PlayingChapter
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -162,7 +161,6 @@ class FindRelatedFilesTest {
     end = end,
     duration = end - start,
     available = true,
-    podcastEpisodeState = BookChapterState.FINISHED,
   )
 
   private fun file(

@@ -19,9 +19,15 @@ power-user extras below, welcome.
 
 ### What's different
 
-- **Download visibility** — every library row shows whether a book is downloaded
-  or downloading; a "downloaded first" sort works alongside every other sorter.
-- **Folders** — group books into your own local folders from the library screen.
+- **Download visibility** — full-width **All Audiobooks** / **Downloads** home
+  tabs make the offline library one tap away; every library row shows whether a
+  book is downloaded or downloading. "Downloaded first" works with every sorter
+  and preserves series, author, and smart-author grouping.
+- **Folders** — group books into local folders. Foldered books leave the main All
+  Audiobooks catalog (including grouped children), while cached copies remain
+  visible in Downloads so offline content never becomes unreachable.
+- **Composite covers** — series, folders, and author fallbacks use persistent
+  mosaics of up to four book covers.
 - **Multi-select** — long-press to select books, then bulk download, mark as
   finished, or add to a folder.
 - **Smarter author grouping** — small authors' books flatten inline (sorted by
@@ -33,17 +39,20 @@ power-user extras below, welcome.
 - **Audiobooks only** — podcast support is removed to keep the app simple. If you
   listen to podcasts through Audiobookshelf, use the original Lissen.
 
-See [FORK_PLAN.md](FORK_PLAN.md) for the full roadmap and what's still in flight.
+See [FORK_PLAN.md](FORK_PLAN.md) for the compact operating brief: current behavior,
+durable decisions, verification status, and maintenance notes.
 
 ### Install
 
-Grab the APK from [GitHub Releases](../../releases) — works great with
-[Obtainium](https://github.com/ImranR98/Obtainium). The fork uses its own
-application id, so it installs alongside the original app.
+This is a personal build; no signed GitHub Release or Obtainium feed is maintained.
+Build the `personal` APK locally. It is signed with your local Android debug key and
+uses its own application id, so it installs alongside the original app and updates
+consistently on the same development machine.
 
 ### Building
 
 1. Clone the repository:
+
 ```
 git clone https://github.com/mcdaniel67/lissen-android.git
 ```
@@ -51,10 +60,12 @@ git clone https://github.com/mcdaniel67/lissen-android.git
 2. Set up the SDK path in your `local.properties`.
 
 3. Build:
+
 ```
-./gradlew assembleDebug   # Debug build
-./gradlew assembleRelease # Release build
+./gradlew assemblePersonal
 ```
+
+Install `app/build/outputs/apk/personal/app-personal.apk`.
 
 ### Localization
 

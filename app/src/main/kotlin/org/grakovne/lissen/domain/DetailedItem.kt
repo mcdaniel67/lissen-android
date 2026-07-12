@@ -52,7 +52,6 @@ data class MediaProgress(
 @JsonClass(generateAdapter = true)
 data class PlayingChapter(
   val available: Boolean,
-  val podcastEpisodeState: BookChapterState?,
   val duration: Double,
   val start: Double,
   val end: Double,
@@ -74,8 +73,3 @@ data class BookAuthor(
   val id: String,
   val name: String,
 ) : Serializable
-
-@Keep
-enum class BookChapterState {
-  FINISHED,
-}

@@ -265,21 +265,34 @@ class CachingModelViewTest {
   @Nested
   inner class CacheForce {
     @Test
-    fun `toggleCacheForce enables when currently disabled`() {
+    fun `setForceCache true enables when currently disabled`() {
       every { preferences.isForceCache() } returns false
 
-      viewModel.toggleCacheForce()
+      viewModel.setForceCache(true)
 
       verify { preferences.enableForceCache() }
+      verify(exactly = 0) { preferences.disableForceCache() }
     }
 
     @Test
-    fun `toggleCacheForce disables when currently enabled`() {
+    fun `setForceCache false disables when currently enabled`() {
       every { preferences.isForceCache() } returns true
 
-      viewModel.toggleCacheForce()
+      viewModel.setForceCache(false)
 
       verify { preferences.disableForceCache() }
+      verify(exactly = 0) { preferences.enableForceCache() }
+    }
+
+    @Test
+    fun `setForceCache is a no-op when requested state is already selected`() {
+      every { preferences.isForceCache() } returnsMany listOf(true, false)
+
+      viewModel.setForceCache(true)
+      viewModel.setForceCache(false)
+
+      verify(exactly = 0) { preferences.enableForceCache() }
+      verify(exactly = 0) { preferences.disableForceCache() }
     }
 
     @Test
@@ -390,6 +403,5 @@ class CachingModelViewTest {
       end = 100.0,
       duration = 100.0,
       available = true,
-      podcastEpisodeState = org.grakovne.lissen.domain.BookChapterState.FINISHED,
     )
 }

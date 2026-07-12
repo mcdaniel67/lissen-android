@@ -1,6 +1,5 @@
 package org.grakovne.lissen.playback.service
 
-import org.grakovne.lissen.domain.BookChapterState
 import org.grakovne.lissen.domain.BookFile
 import org.grakovne.lissen.domain.PlayingChapter
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -160,7 +159,6 @@ class ResolveChapterToFilesTest {
         end = previousChapterEnd + duration.toDouble(),
         duration = duration.toDouble(),
         available = true,
-        podcastEpisodeState = BookChapterState.FINISHED,
       ).also {
         previousChapterEnd += duration.toDouble()
       }

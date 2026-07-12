@@ -11,17 +11,19 @@ import java.io.File
 
 data class AuthorCoverKey(
   val authorId: String,
+  val authorName: String,
 )
 
 class AuthorCoverFetcher(
   private val localCacheRepository: LocalCacheRepository,
   private val mediaChannel: LissenMediaProvider,
   private val authorId: String,
+  private val authorName: String,
   options: Options,
 ) : ImageFetcher(options) {
   override suspend fun resolve(): OperationResult<File> =
     when {
-      localOnly -> localCacheRepository.fetchAuthorCover(authorId)
+      localOnly -> localCacheRepository.fetchAuthorCover(authorName)
       else -> mediaChannel.fetchAuthorCover(authorId)
     }
 }
@@ -34,7 +36,14 @@ class AuthorCoverFetcherFactory(
     data: AuthorCoverKey,
     options: Options,
     imageLoader: ImageLoader,
-  ): AuthorCoverFetcher = AuthorCoverFetcher(localCacheRepository, mediaChannel, data.authorId, options)
+  ): AuthorCoverFetcher =
+    AuthorCoverFetcher(
+      localCacheRepository = localCacheRepository,
+      mediaChannel = mediaChannel,
+      authorId = data.authorId,
+      authorName = data.authorName,
+      options = options,
+    )
 }
 
 class AuthorCoverKeyer : Keyer<AuthorCoverKey> {

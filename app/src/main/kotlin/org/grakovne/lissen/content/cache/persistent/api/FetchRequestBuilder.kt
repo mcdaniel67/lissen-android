@@ -53,6 +53,8 @@ class FetchRequestBuilder {
         "title" -> "b.title"
         "author" -> "b.author"
         "duration" -> "b.duration"
+        "createdAt" -> "b.createdAt"
+        "updatedAt" -> "b.updatedAt"
         else -> "b.title"
       }
 

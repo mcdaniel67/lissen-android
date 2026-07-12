@@ -61,6 +61,18 @@ class FetchRequestBuilderTest {
     }
 
     @Test
+    fun `createdAt order maps to b_createdAt column`() {
+      val query = builder().orderField("createdAt").build()
+      assertTrue(query.sql.contains("b.createdAt"), "Expected b.createdAt, got: ${query.sql}")
+    }
+
+    @Test
+    fun `updatedAt order maps to b_updatedAt column`() {
+      val query = builder().orderField("updatedAt").build()
+      assertTrue(query.sql.contains("b.updatedAt"), "Expected b.updatedAt, got: ${query.sql}")
+    }
+
+    @Test
     fun `unknown order field falls back to b_title`() {
       val query = builder().orderField("unknown_field").build()
       assertTrue(query.sql.contains("b.title"), "Expected fallback to b.title, got: ${query.sql}")

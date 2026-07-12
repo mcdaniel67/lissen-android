@@ -126,6 +126,7 @@ class CachedBookGroupingTest {
       is LibraryEntry.BookEntry -> book.id
       is LibraryEntry.SeriesEntry -> id
       is LibraryEntry.AuthorEntry -> id
+      is LibraryEntry.FolderEntry -> error("Unexpected folder entry in cached library grouping: $id")
     }
 
   companion object {

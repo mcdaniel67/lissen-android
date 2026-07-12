@@ -176,12 +176,13 @@ class LissenMediaProvider
         }
 
         false -> {
+          val foldedIds = folderRepository.foldedBookIds()
           providePreferredChannel()
             .searchBooks(
               libraryId = libraryId,
               query = query,
               limit = limit,
-            )
+            ).map { books -> books.filterNot { it.id in foldedIds } }
         }
       }
     }
@@ -208,19 +209,30 @@ class LissenMediaProvider
 
       val grouping = preferences.getLibraryGrouping()
 
-      val foldedIds = folderRepository.foldedBookIds()
-
       if (preferences.isForceCache()) {
-        return localCacheRepository
-          .fetchLibrary(
-            libraryId = libraryId,
-            pageSize = pageSize,
-            pageNumber = pageNumber,
-            libraryGrouping = grouping,
-          ).filterFoldedBooks(foldedIds)
+        return localCacheRepository.fetchLibrary(
+          libraryId = libraryId,
+          pageSize = pageSize,
+          pageNumber = pageNumber,
+          libraryGrouping = grouping,
+        )
       }
 
-      if (grouping == LibraryGrouping.NONE && preferences.getDownloadedFirst()) {
+      val foldedIds = folderRepository.foldedBookIds()
+      val downloadedFirst = preferences.getDownloadedFirst()
+
+      if (grouping != LibraryGrouping.NONE && (downloadedFirst || foldedIds.isNotEmpty())) {
+        return fetchGroupedLibrary(
+          libraryId = libraryId,
+          pageSize = pageSize,
+          pageNumber = pageNumber,
+          grouping = grouping,
+          foldedIds = foldedIds,
+          downloadedFirst = downloadedFirst,
+        )
+      }
+
+      if (downloadedFirst) {
         return fetchLibraryDownloadedFirst(
           libraryId = libraryId,
           pageSize = pageSize,
@@ -229,13 +241,51 @@ class LissenMediaProvider
         )
       }
 
-      return providePreferredChannel()
-        .fetchLibrary(
+      return fetchRemoteLibrary(
+        libraryId = libraryId,
+        pageSize = pageSize,
+        pageNumber = pageNumber,
+        grouping = grouping,
+        foldedIds = foldedIds,
+      )
+    }
+
+    private suspend fun fetchRemoteLibrary(
+      libraryId: String,
+      pageSize: Int,
+      pageNumber: Int,
+      grouping: LibraryGrouping,
+      foldedIds: Set<String>,
+    ): OperationResult<PagedItems<LibraryEntry>> {
+      if (foldedIds.isEmpty()) {
+        return providePreferredChannel().fetchLibrary(
           libraryId = libraryId,
           pageSize = pageSize,
           pageNumber = pageNumber,
           libraryGrouping = grouping,
-        ).filterFoldedBooks(foldedIds)
+        )
+      }
+
+      val startIndex = pageNumber * pageSize
+      val remoteFetchSize = startIndex + pageSize + foldedIds.size
+
+      return providePreferredChannel()
+        .fetchLibrary(
+          libraryId = libraryId,
+          pageSize = remoteFetchSize,
+          pageNumber = 0,
+          libraryGrouping = grouping,
+        ).map { paged ->
+          PagedItems(
+            items =
+              paged.items
+                .filterNot { it is LibraryEntry.BookEntry && it.book.id in foldedIds }
+                .drop(startIndex)
+                .take(pageSize),
+            currentPage = pageNumber,
+            totalItems = paged.totalItems,
+          )
+        }
     }
 
     private suspend fun fetchLibraryDownloadedFirst(
@@ -246,13 +296,13 @@ class LissenMediaProvider
     ): OperationResult<PagedItems<LibraryEntry>> {
       val cachedBooks = localCacheRepository.fetchCachedBooks(libraryId).filterNot { it.id in foldedIds }
       if (cachedBooks.isEmpty()) {
-        return providePreferredChannel()
-          .fetchLibrary(
-            libraryId = libraryId,
-            pageSize = pageSize,
-            pageNumber = pageNumber,
-            libraryGrouping = LibraryGrouping.NONE,
-          ).filterFoldedBooks(foldedIds)
+        return fetchRemoteLibrary(
+          libraryId = libraryId,
+          pageSize = pageSize,
+          pageNumber = pageNumber,
+          grouping = LibraryGrouping.NONE,
+          foldedIds = foldedIds,
+        )
       }
 
       val cachedIds = cachedBooks.mapTo(mutableSetOf()) { it.id }
@@ -267,8 +317,8 @@ class LissenMediaProvider
       val remoteOffset = (startIndex - cachedBooks.size).coerceAtLeast(0)
       val remoteFetchSize =
         when (remaining) {
-          0 -> 1
-          else -> remoteOffset + remaining + cachedIds.size
+          0 -> 1 + foldedIds.size
+          else -> remoteOffset + remaining + cachedIds.size + foldedIds.size
         }
 
       return providePreferredChannel()
@@ -292,24 +342,104 @@ class LissenMediaProvider
         }
     }
 
-    private suspend fun OperationResult<PagedItems<LibraryEntry>>.filterFoldedBooks(
+    private suspend fun fetchGroupedLibrary(
+      libraryId: String,
+      pageSize: Int,
+      pageNumber: Int,
+      grouping: LibraryGrouping,
       foldedIds: Set<String>,
-    ): OperationResult<PagedItems<LibraryEntry>> =
-      when {
-        foldedIds.isEmpty() -> {
-          this
+      downloadedFirst: Boolean,
+    ): OperationResult<PagedItems<LibraryEntry>> {
+      val cachedBooks =
+        when (downloadedFirst) {
+          true -> cachedDetailedItems(libraryId).filterNot { it.id in foldedIds }
+          false -> emptyList()
         }
 
-        else -> {
-          map { paged ->
+      return providePreferredChannel()
+        .fetchLibrary(
+          libraryId = libraryId,
+          pageSize = pageSize,
+          pageNumber = 0,
+          libraryGrouping = grouping,
+        ).flatMap { firstPage ->
+          val allEntriesResult =
+            when {
+              firstPage.totalItems <= pageSize -> {
+                OperationResult.Success(firstPage)
+              }
+
+              else -> {
+                providePreferredChannel().fetchLibrary(
+                  libraryId = libraryId,
+                  pageSize = firstPage.totalItems,
+                  pageNumber = 0,
+                  libraryGrouping = grouping,
+                )
+              }
+            }
+
+          allEntriesResult.map { allEntries ->
+            val filtered =
+              allEntries.items.filterNot { it is LibraryEntry.BookEntry && it.book.id in foldedIds }
+            val ordered =
+              when (downloadedFirst) {
+                true -> {
+                  val (downloaded, other) = filtered.partition { it.containsDownloadedBook(cachedBooks) }
+                  downloaded + other
+                }
+
+                false -> {
+                  filtered
+                }
+              }
+            val startIndex = pageNumber * pageSize
+
             PagedItems(
-              items = paged.items.filterNot { it is LibraryEntry.BookEntry && it.book.id in foldedIds },
-              currentPage = paged.currentPage,
-              totalItems = paged.totalItems,
+              items = ordered.drop(startIndex).take(pageSize),
+              currentPage = pageNumber,
+              totalItems = ordered.size,
             )
           }
         }
+    }
+
+    private suspend fun cachedDetailedItems(libraryId: String): List<DetailedItem> =
+      localCacheRepository
+        .fetchDetailedItems()
+        .fold(
+          onSuccess = { page -> page.items.filter { it.libraryId == libraryId } },
+          onFailure = { emptyList() },
+        )
+
+    private fun LibraryEntry.containsDownloadedBook(cachedBooks: List<DetailedItem>): Boolean =
+      when (this) {
+        is LibraryEntry.BookEntry -> {
+          cachedBooks.any { it.id == book.id }
+        }
+
+        is LibraryEntry.SeriesEntry -> {
+          cachedBooks.any { cached ->
+            cached.series.any { series -> series.id == id || series.name.matchesGroup(title) }
+          }
+        }
+
+        is LibraryEntry.AuthorEntry -> {
+          cachedBooks.any { cached ->
+            cached.authors.any { author -> author.id == id || author.name.matchesGroup(name) } ||
+              cached.author.matchesGroup(name)
+          }
+        }
+
+        is LibraryEntry.FolderEntry -> {
+          false
+        }
       }
+
+    private fun String?.matchesGroup(groupName: String): Boolean =
+      this
+        ?.trim()
+        ?.equals(groupName.trim(), ignoreCase = true) == true
 
     suspend fun fetchSeriesItems(
       libraryId: String,
@@ -318,8 +448,25 @@ class LissenMediaProvider
       Timber.d("Fetching series items: libraryId=$libraryId, seriesId=$seriesId")
 
       return when (preferences.isForceCache()) {
-        true -> localCacheRepository.fetchSeriesItems(libraryId = libraryId, seriesId = seriesId)
-        false -> providePreferredChannel().fetchSeriesItems(libraryId = libraryId, seriesId = seriesId)
+        true -> {
+          localCacheRepository.fetchSeriesItems(libraryId = libraryId, seriesId = seriesId)
+        }
+
+        false -> {
+          val foldedIds = folderRepository.foldedBookIds()
+          val cachedIds =
+            when (preferences.getDownloadedFirst()) {
+              true -> cachedDetailedItems(libraryId).mapTo(mutableSetOf()) { it.id }
+              false -> emptySet()
+            }
+          providePreferredChannel()
+            .fetchSeriesItems(libraryId = libraryId, seriesId = seriesId)
+            .map { books ->
+              books
+                .filterNot { it.id in foldedIds }
+                .prioritizeDownloaded(cachedIds)
+            }
+        }
       }
     }
 
@@ -330,9 +477,32 @@ class LissenMediaProvider
       Timber.d("Fetching author books: libraryId=$libraryId, authorId=$authorId")
 
       return when (preferences.isForceCache()) {
-        true -> localCacheRepository.fetchAuthorItems(libraryId = libraryId, authorId = authorId)
-        false -> providePreferredChannel().fetchAuthorBooks(libraryId = libraryId, authorId = authorId)
+        true -> {
+          localCacheRepository.fetchAuthorItems(libraryId = libraryId, authorId = authorId)
+        }
+
+        false -> {
+          val foldedIds = folderRepository.foldedBookIds()
+          val cachedIds =
+            when (preferences.getDownloadedFirst()) {
+              true -> cachedDetailedItems(libraryId).mapTo(mutableSetOf()) { it.id }
+              false -> emptySet()
+            }
+          providePreferredChannel()
+            .fetchAuthorBooks(libraryId = libraryId, authorId = authorId)
+            .map { books ->
+              books
+                .filterNot { it.id in foldedIds }
+                .prioritizeDownloaded(cachedIds)
+            }
+        }
       }
+    }
+
+    private fun List<Book>.prioritizeDownloaded(cachedIds: Set<String>): List<Book> {
+      if (cachedIds.isEmpty()) return this
+      val (downloaded, other) = partition { it.id in cachedIds }
+      return downloaded + other
     }
 
     suspend fun fetchLibraries(): OperationResult<List<Library>> {
@@ -389,9 +559,11 @@ class LissenMediaProvider
         }
 
         false -> {
+          val foldedIds = folderRepository.foldedBookIds()
           providePreferredChannel()
             .fetchRecentListenedBooks(libraryId)
             .map { items -> syncFromLocalProgress(libraryId = libraryId, detailedItems = items) }
+            .map { books -> books.filterNot { it.id in foldedIds } }
         }
       }
     }

@@ -226,11 +226,14 @@ class CachingModelView
       contentCachingManager.dropCache(item, chapter)
     }
 
-    fun toggleCacheForce() {
-      Timber.d("User action: toggleCacheForce (current=${localCacheUsing()})")
-      when (localCacheUsing()) {
-        true -> preferences.disableForceCache()
-        false -> preferences.enableForceCache()
+    fun setForceCache(enabled: Boolean) {
+      val currentlyEnabled = localCacheUsing()
+      Timber.d("User action: setForceCache (enabled=$enabled, current=$currentlyEnabled)")
+      if (enabled == currentlyEnabled) return
+
+      when (enabled) {
+        true -> preferences.enableForceCache()
+        false -> preferences.disableForceCache()
       }
     }
 

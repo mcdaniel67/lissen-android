@@ -1,10 +1,14 @@
 package org.grakovne.lissen.content.cache.persistent.api
 
+import androidx.sqlite.db.SupportSQLiteQuery
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.runBlocking
 import org.grakovne.lissen.common.LibraryOrderingConfiguration
+import org.grakovne.lissen.common.LibraryOrderingDirection
+import org.grakovne.lissen.common.LibraryOrderingOption
 import org.grakovne.lissen.content.cache.persistent.OfflineBookStorageProperties
 import org.grakovne.lissen.content.cache.persistent.converter.CachedBookEntityConverter
 import org.grakovne.lissen.content.cache.persistent.converter.CachedBookEntityDetailedConverter
@@ -21,6 +25,8 @@ import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 
 class CachedBookRepositoryTest {
   private val bookDao = mockk<CachedBookDao>(relaxed = true)
@@ -388,6 +394,37 @@ class CachedBookRepositoryTest {
       assertEquals(listOf("b1", "b2"), books.map { it.id })
     }
 
+  @ParameterizedTest(name = "{0} {1} uses {2} {3}")
+  @CsvSource(
+    "TITLE, ASCENDING, b.title, ASC",
+    "TITLE, DESCENDING, b.title, DESC",
+    "AUTHOR, ASCENDING, b.author, ASC",
+    "AUTHOR, DESCENDING, b.author, DESC",
+    "CREATED_AT, ASCENDING, b.createdAt, ASC",
+    "CREATED_AT, DESCENDING, b.createdAt, DESC",
+    "UPDATED_AT, ASCENDING, b.updatedAt, ASC",
+    "UPDATED_AT, DESCENDING, b.updatedAt, DESC",
+  )
+  fun `fetchBooks maps every configured ordering to the raw query`(
+    option: LibraryOrderingOption,
+    direction: LibraryOrderingDirection,
+    expectedColumn: String,
+    expectedDirection: String,
+  ) = runBlocking {
+    every { preferences.getLibraryOrdering() } returns LibraryOrderingConfiguration(option, direction)
+    val query = slot<SupportSQLiteQuery>()
+    coEvery { bookDao.fetchCachedBooks(capture(query)) } returns emptyList()
+
+    repository.fetchBooks(LIBRARY_ID, pageNumber = 0, pageSize = 20)
+
+    val orderBy =
+      query.captured.sql
+        .lineSequence()
+        .map(String::trim)
+        .single { it.startsWith("ORDER BY") }
+    assertEquals("ORDER BY $expectedColumn $expectedDirection", orderBy)
+  }
+
   @Test
   fun `searchBooks maps results through the converter`() =
     runBlocking {
@@ -490,7 +527,6 @@ class CachedBookRepositoryTest {
                 end = 60.0,
                 duration = 60.0,
                 available = true,
-                podcastEpisodeState = null,
               ),
             ),
           progress = null,
@@ -537,7 +573,6 @@ class CachedBookRepositoryTest {
                 end = 60.0,
                 duration = 60.0,
                 available = true,
-                podcastEpisodeState = null,
               ),
             ),
           progress = null,

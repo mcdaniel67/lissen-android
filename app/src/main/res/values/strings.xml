@@ -9,7 +9,6 @@
     <string name="a11y_settings">Settings</string>
     <string name="a11y_delete_from_cache">Delete from cache</string>
     <string name="a11y_available_offline">Available offline</string>
-    <string name="a11y_collapse_queue">Collapse queue</string>
     <string name="a11y_open">Open</string>
     <string name="a11y_previous_track">Previous track</string>
     <string name="a11y_rewind_seconds">Rewind %1$d seconds</string>
@@ -27,7 +26,8 @@
     </plurals>
     <string name="library_screen_library_title">Library</string>
     <string name="library_screen_continue_listening_title">Continue listening</string>
-    <string name="library_screen_preferences_menu_item">Preferences</string>
+    <string name="library_tab_all_audiobooks">All Audiobooks</string>
+    <string name="library_tab_downloads">Downloads</string>
     <string name="login_screen_title">Connect to server</string>
     <string name="hint_server_url_input">Server URL</string>
     <string name="login_screen_login_input">Login</string>
@@ -35,14 +35,9 @@
     <string name="login_screen_password_input">Password</string>
     <string name="login_screen_connect_button_text">Connect</string>
     <string name="player_screen_playback_speed_navigation">Speed</string>
-    <string name="player_screen_chapter_list_navigation_library">Chapters</string>
-    <string name="player_screen_chapter_list_navigation_podcast">Episodes</string>
-    <string name="player_screen_chapter_list_navigation_items">Items</string>
     <string name="player_screen_library_playing_title">Playing chapters</string>
-    <string name="player_screen_podcast_playing_title">Playing episodes</string>
     <string name="player_screen_items_playing_title">Playing items</string>
     <string name="player_screen_now_playing_title_chapter_of">Chapter %1$d of %2$s</string>
-    <string name="player_screen_now_playing_title_podcast_of">Episode %1$d of %2$s</string>
     <string name="player_screen_now_playing_title_item_of">Item %1$d of %2$s</string>
     <string name="settings_screen_title">Preferences</string>
     <string name="settings_screen_connected_as_title">Connected as</string>
@@ -57,7 +52,6 @@
     <string name="login_error_credentials_are_invalid">Credentials are invalid</string>
     <string name="login_error_host_url_shall_be_https_or_http">Host URL shall be https:// or http://</string>
     <string name="login_error_connection_error">Connection error</string>
-    <string name="show_downloaded_content_only">Downloaded only</string>
     <string name="library_item_downloaded_indicator">Downloaded</string>
     <string name="library_item_downloading_indicator">Downloading</string>
     <string name="library_downloaded_first">Downloaded first</string>
@@ -89,7 +83,6 @@
         <item quantity="one">%d book</item>
         <item quantity="other">%d books</item>
     </plurals>
-    <string name="library_quick_settings_filters_title">Filters</string>
     <string name="library_quick_settings_sort_title">Sort by</string>
     <string name="the_library_is_empty">The library is empty</string>
     <string name="the_offline_library_is_empty">No saved books yet</string>
@@ -110,7 +103,6 @@
     <string name="custom_header_hint_name">Key</string>
     <string name="custom_header_hint_value">Value</string>
     <string name="custom_headers_title">Custom Headers</string>
-    <string name="library_screen_podcast_title">Podcasts</string>
     <string name="settings_screen_server_version">Server Version</string>
     <string name="timer_option_disabled">Disabled</string>
     <string name="timer_option_after_current_chapter">When the chapter ends</string>
@@ -123,7 +115,6 @@
         <item quantity="one">%d second</item>
         <item quantity="other">%d seconds</item>
     </plurals>
-    <string name="timer_option_disable_timer">Disable Timer</string>
     <string name="timer_title">Sleep Timer</string>
     <string name="timer_option_custom_label">Custom:</string>
     <string name="timer_option_minutes_short">%dm</string>
@@ -132,23 +123,19 @@
     <string name="player_screen_timer_navigation">Timer</string>
     <string name="chapter_search_hint">Search by chapter title</string>
     <string name="widget_placeholder_text">Click to open the app</string>
-    <string name="the_offline_podcasts_is_empty">No saved podcasts yet</string>
     <string name="player_screen_downloads_navigation">Downloads</string>
-    <string name="downloads_menu_download_podcast">Download podcast</string>
     <string name="downloads_menu_download_option_disable">Disabled</string>
     <string name="downloads_menu_download_option_current_chapter">Current chapter</string>
-    <string name="downloads_menu_download_option_current_episode">Current episode</string>
     <string name="downloads_menu_download_option_current_item">Current item</string>
     <string name="downloads_menu_download_option_entire_book">Entire book</string>
-    <string name="downloads_menu_download_option_entire_podcast">Entire podcast</string>
     <string name="downloads_menu_download_option_entire_item">Entire item</string>
     <string name="downloads_menu_download_option_remaining_chapters">Remaining chapters</string>
-    <string name="downloads_menu_download_option_remaining_episodes">Remaining episodes</string>
     <string name="downloads_menu_download_option_remaining_items">Remaining items</string>
     <plurals name="downloads_menu_download_option_next_chapters">
         <item quantity="one">Next %d chapter</item>
         <item quantity="other">Next %d chapters</item>
     </plurals>
+    <!-- Kept as default fallbacks because locale-only plurals fail Android resource validation. -->
     <plurals name="downloads_menu_download_option_next_episodes">
         <item quantity="one">Next %d episode</item>
         <item quantity="other">Next %d episodes</item>
@@ -157,10 +144,6 @@
         <item quantity="one">Next %d item</item>
         <item quantity="other">Next %d items</item>
     </plurals>
-    <string name="downloads_menu_download_option_next_episodes_label">Next episodes</string>
-    <string name="downloads_menu_download_option_decrease">Decrease count</string>
-    <string name="downloads_menu_download_option_increase">Increase count</string>
-    <string name="downloads_menu_download_option_clear_episodes">Clear downloaded episodes</string>
     <string name="player_screen_download_delete_title">Delete download</string>
     <string name="player_screen_download_delete_message">Remove the downloaded files for this book from this device? Your server data is not affected.</string>
     <string name="player_screen_download_delete_confirm">Delete</string>
@@ -170,10 +153,8 @@
     <string name="playing_item_details_narrator">Narrator</string>
     <string name="playing_item_details_duration">Duration</string>
     <string name="playing_item_details_year">Year</string>
-    <string name="playing_item_details_series">Series</string>
     <string name="color_scheme_black">Black</string>
     <string name="chapters_list_empty">The book has no chapters</string>
-    <string name="episodes_list_empty">No podcast has no episodes</string>
     <string name="items_list_empty">No available items</string>
     <string name="notification_content_caching_channel">Content Caching</string>
     <string name="notification_content_caching_title">Content is caching</string>
@@ -185,7 +166,6 @@
     <string name="login_screen_open_id_button">Connect with OpenID</string>
     <string name="source_code_on_github_title">Source code on GitHub</string>
     <string name="source_code_on_github_subtitle">Report issues or suggest improvements</string>
-    <string name="settings_screen_library_ordering_title">Library sorting</string>
     <string name="settings_screen_library_ordering_title_option">Title</string>
     <string name="settings_screen_library_ordering_author_option">Author</string>
     <string name="settings_screen_library_ordering_creation_date_option">Date of creation</string>
@@ -225,7 +205,6 @@
     <string name="wifi_only_settings_option">WiFi only</string>
     <string name="wifi_or_cellular_settings_option">WiFi or cellular network</string>
     <string name="library_type_library">Books</string>
-    <string name="library_type_podcast">Podcasts</string>
     <string name="library_type_unknown">Unknown</string>
     <string name="settings_screen_internal_connection_url_title">Local network server address</string>
     <string name="settings_screen_internal_connection_url_description">Define server access for home Wi‑Fi</string>

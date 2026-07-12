@@ -307,9 +307,10 @@ class LibraryViewModel
       result?.fold(
         onSuccess = { books ->
           val ordered =
-            when (entry) {
-              is LibraryEntry.SeriesEntry -> books.sortedBySeriesPosition()
-              is LibraryEntry.AuthorEntry -> books.sortedBySeriesThenPosition()
+            when {
+              preferences.getDownloadedFirst() && preferences.isForceCache().not() -> books
+              entry is LibraryEntry.SeriesEntry -> books.sortedBySeriesPosition()
+              entry is LibraryEntry.AuthorEntry -> books.sortedBySeriesThenPosition()
               else -> books
             }
           _groupBooks.value = _groupBooks.value + (groupId to ordered)
@@ -324,11 +325,6 @@ class LibraryViewModel
       _searchToken.value = token
       _searchRequested.value = true
     }
-
-    fun fetchPreferredLibraryTitle(): String? =
-      preferences
-        .getPreferredLibrary()
-        ?.title
 
     val preferredLibraryType: StateFlow<LibraryType> =
       preferences

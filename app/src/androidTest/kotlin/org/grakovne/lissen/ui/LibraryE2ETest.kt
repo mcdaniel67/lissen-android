@@ -84,9 +84,11 @@ class LibraryE2ETest {
   }
 
   @Test
-  fun library_showsLibraryTitle() {
+  fun library_showsAudiobookTabs() {
     login()
-    composeRule.onNodeWithTag("libraryNavBarTitle").assertIsDisplayed()
+    composeRule.onNodeWithTag("libraryTabs").assertIsDisplayed()
+    composeRule.onNodeWithTag("libraryTabAll").assertIsDisplayed()
+    composeRule.onNodeWithTag("libraryTabDownloads").assertIsDisplayed()
   }
 
   @Test
